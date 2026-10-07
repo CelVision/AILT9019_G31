@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnectFour Connect — Activity-Mediated Social Mini-Game</title>
+  <meta name="description" content="ConnectFour Connect: A low-pressure social mini-game connecting university peers through turn-based Connect Four and safe canned reactions.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-logo">🔴🟡</div>
+      <div class="brand-text">
+        <h1 class="brand-title">ConnectFour Connect</h1>
+        <span class="brand-subtitle">AI-Supported Social Mini-Game</span>
+      </div>
+    </div>
+    <div class="header-status">
+      <div id="connectionStatus" class="status-pill status-disconnected">
+        <span class="status-dot"></span>
+        <span class="status-label">Offline</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Game Container -->
+  <main class="main-container">
+
+    <!-- Active Match Dashboard -->
+    <section id="matchSection" class="match-section hidden">
+      <!-- Players Bar -->
+      <div class="players-bar">
+        <!-- Player 1 (You) -->
+        <div id="player1Card" class="player-card active-turn">
+          <div class="avatar avatar-p1">🔴</div>
+          <div class="player-info">
+            <span id="player1Name" class="player-name">You</span>
+            <span id="player1Role" class="player-meta">Player 1</span>
+          </div>
+          <div id="p1SpeechBubble" class="speech-bubble hidden"></div>
+        </div>
+
+        <!-- Center Match Info & Turn Timer -->
+        <div class="match-info">
+          <div id="turnIndicator" class="turn-indicator">Your Turn</div>
+          <div class="timer-container">
+            <div id="timerBar" class="timer-bar" style="width: 100%;"></div>
+          </div>
+          <span id="timerText" class="timer-text">30s</span>
+        </div>
+
+        <!-- Player 2 (Opponent / Bot) -->
+        <div id="player2Card" class="player-card">
+          <div class="avatar avatar-p2">🟡</div>
+          <div class="player-info">
+            <span id="player2Name" class="player-name">Opponent</span>
+            <span id="player2Role" class="player-meta">Waiting...</span>
+          </div>
+          <div id="p2SpeechBubble" class="speech-bubble hidden"></div>
+        </div>
+      </div>
+
+      <!-- Connect Four Board -->
+      <div class="board-wrapper">
+        <canvas id="gameCanvas" width="640" height="550"></canvas>
+      </div>
+
+      <!-- In-Game Canned Interaction Tray -->
+      <div class="interaction-tray">
+        <div class="tray-section">
+          <span class="tray-label">Preset Phrases:</span>
+          <div class="phrases-grid">
+            <button class="phrase-btn" data-id="1">Good luck!</button>
+            <button class="phrase-btn" data-id="2">Nice move!</button>
+            <button class="phrase-btn" data-id="3">Thinking...</button>
+            <button class="phrase-btn" data-id="4">Close one!</button>
+            <button class="phrase-btn" data-id="5">Well played!</button>
+            <button class="phrase-btn" data-id="6">Good game!</button>
+          </div>
+        </div>
+        <div class="tray-section">
+          <span class="tray-label">Reactions:</span>
+          <div class="stickers-row">
+            <button class="sticker-btn" data-id="1" title="Thumbs Up">👍</button>
+            <button class="sticker-btn" data-id="2" title="Applause">👏</button>
+            <button class="sticker-btn" data-id="3" title="Thinking">🤔</button>
+            <button class="sticker-btn" data-id="4" title="Celebration">🎉</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Onboarding & Guest Registration Modal -->
+    <div id="onboardingModal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-icon">🎮</div>
+          <h2 class="modal-title">Welcome to ConnectFour Connect</h2>
+          <p class="modal-desc">Meet peers through casual, turn-based play. No awkward bios, no swiping.</p>
+        </div>
+
+        <form id="registrationForm" class="registration-form">
+          <div class="form-group">
+            <label for="nicknameInput">Your Nickname</label>
+            <input type="text" id="nicknameInput" placeholder="e.g. Alex" minlength="2" maxlength="16" required autocomplete="off">
+            <span class="form-hint">2–16 characters, no real names required</span>
+          </div>
+
+          <div class="form-group">
+            <label for="birthYearInput">Birth Year</label>
+            <input type="number" id="birthYearInput" placeholder="e.g. 2003" min="1920" max="2008" required>
+            <span class="form-hint">Must be 18+ to enter (Born 2008 or earlier)</span>
+          </div>
+
+          <div id="formError" class="form-error hidden"></div>
+
+          <div class="onboarding-guide">
+            <div class="guide-item">
+              <span class="guide-num">1</span>
+              <span><strong>Drop Tokens</strong>: Click any column (0–6) to connect 4 in a row.</span>
+            </div>
+            <div class="guide-item">
+              <span class="guide-num">2</span>
+              <span><strong>Peer Matching</strong>: Matched with university peers within ±3 years of age.</span>
+            </div>
+            <div class="guide-item">
+              <span class="guide-num">3</span>
+              <span><strong>Always Available</strong>: After 15s in queue, an AI agent joins seamlessly.</span>
+            </div>
+          </div>
+
+          <button type="submit" id="btnFindMatch" class="btn btn-primary btn-block">Find Match (15s Max)</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Matchmaking Queue Overlay -->
+    <div id="queueModal" class="modal-overlay hidden">
+      <div class="modal-card modal-center">
+        <div class="queue-spinner"></div>
+        <h3 class="queue-title">Searching for a Peer...</h3>
+        <p class="queue-subtitle">Finding a student within ±3 years of your age</p>
+        <div class="queue-progress-bar">
+          <div id="queueProgress" class="queue-progress-fill" style="width: 0%;"></div>
+        </div>
+        <span id="queueTimerText" class="queue-timer-text">15s remaining before AI opponent joins</span>
+        <button id="btnCancelQueue" class="btn btn-secondary mt-4">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Match Result Modal -->
+    <div id="resultModal" class="modal-overlay hidden">
+      <div class="modal-card modal-center">
+        <div id="resultIcon" class="result-icon">🏆</div>
+        <h2 id="resultTitle" class="result-title">Victory!</h2>
+        <p id="resultSubtitle" class="result-subtitle">You connected 4 tokens!</p>
+        
+        <div class="result-stats">
+          <div class="stat-box">
+            <span class="stat-value" id="statTurns">18</span>
+            <span class="stat-label">Turns</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value" id="statDuration">2m 14s</span>
+            <span class="stat-label">Duration</span>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="btnRematch" class="btn btn-primary">Rematch</button>
+          <button id="btnReturnLobby" class="btn btn-secondary">Back to Lobby</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fallback Notification Toast -->
+    <div id="fallbackToast" class="toast hidden">
+      <span class="toast-icon">⚡</span>
+      <span id="toastMessage" class="toast-text">AI opponent operating in local fallback mode.</span>
+    </div>
+
+  </main>
+
+  <script src="js/game_board.js"></script>
+  <script src="js/canned_chat.js"></script>
+  <script src="js/socket_client.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

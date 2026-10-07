@@ -1,0 +1,23 @@
+[Unit]
+Description=ConnectFour Connect FastAPI ASGI Application
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/AILT9019_G31/server
+Environment="PATH=/var/www/AILT9019_G31/server/venv/bin"
+EnvironmentFile=/var/www/AILT9019_G31/server/.env
+ExecStart=/var/www/AILT9019_G31/server/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+
+Restart=always
+RestartSec=3
+LimitNOFILE=65536
+
+# Standard logging
+StandardOutput=append:/var/log/connectfour/access.log
+StandardError=append:/var/log/connectfour/error.log
+
+[Install]
+WantedBy=multi-user.target
