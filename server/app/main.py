@@ -10,10 +10,10 @@ import uuid
 from typing import Dict, List, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
+from app.config import get_ai_settings
 from app.game_engine import ConnectFourEngine
-from app.ai.minimax_fallback import get_minimax_move
+from app.ai.glm_client import GLMError, request_glm_move, safe_legal_column
 
 
 app = FastAPI(title="ConnectFour Connect")
@@ -51,10 +51,14 @@ manager = ConnectionManager()
 
 @app.get("/api/health")
 async def health_check():
+    ai = get_ai_settings()
     return {
         "status": "healthy",
         "active_rooms": len(active_rooms),
-        "queued_users": len(matching_pool)
+        "queued_users": len(matching_pool),
+        # Never return the key. These two fields are safe for operators.
+        "llm_enabled": ai.enabled,
+        "llm_model": ai.default_model,
     }
 
 
@@ -306,46 +310,101 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 async def handle_ai_turn(room: dict):
-    """Executes AI move using Minimax fallback (<50ms)."""
-    await asyncio.sleep(0.6)  # Natural human-like pause
-    engine = room["engine"]
+    """Execute a GLM PvE move; use a safe center-out move if GLM is unavailable.
 
-    ai_col = get_minimax_move(engine.get_board(), depth=4, bot_piece=2)
+    Minimax is deliberately not called here during the GLM-first phase (WP3-3).
+    WP3-7 restores it as the real fallback before the checkpoint.
+    """
+    await asyncio.sleep(0.4)  # Natural human-like pause
+    engine = room["engine"]
+    settings = get_ai_settings()
+
+    ai_col = None
+    glm_move = None
+    fallback_reason = None
+
+    try:
+        glm_move = await asyncio.wait_for(
+            request_glm_move(engine.get_board(), settings=settings),
+            timeout=settings.timeout_seconds,
+        )
+        ai_col = glm_move.column
+    except asyncio.TimeoutError:
+        fallback_reason = "timeout"
+    except GLMError as exc:
+        fallback_reason = exc.reason
+    except Exception:
+        fallback_reason = "unexpected_error"
+
+    if ai_col is None:
+        ai_col = safe_legal_column(engine.get_board())
+        if fallback_reason and not room.get("fallback_notified"):
+            room["fallback_notified"] = True
+            await manager.send_json(room["p1"]["ws"], "pve_fallback_notice", {
+                "message": f"GLM unavailable ({fallback_reason}); using a safe move."
+            })
+
+    if ai_col is None:
+        await manager.send_json(room["p1"]["ws"], "game_over", {
+            "winner": 0, "reason": "draw"
+        })
+        active_rooms.pop(room["room_id"], None)
+        return
+
     success, row = engine.drop_token(ai_col, player=2)
 
-    if success:
-        is_win, win_coords = engine.check_win(row, ai_col)
-        is_draw = engine.is_draw()
-
-        room["current_turn"] = 1
-        update_payload = {
-            "board": engine.get_board(),
-            "last_move": {"player": 2, "row": row, "column": ai_col},
-            "current_turn": 1
-        }
-        await manager.send_json(room["p1"]["ws"], "board_update", update_payload)
-
-        # AI occasional reaction sticker (thumbs up or thinking)
-        if is_win:
-            await manager.send_json(room["p1"]["ws"], "broadcast_reaction", {
-                "from_player": 2, "category": "phrase", "id": 5 # "Well played!"
-            })
-            await manager.send_json(room["p1"]["ws"], "game_over", {
-                "winner": 2, "reason": "connect4", "winning_coordinates": win_coords
-            })
-            active_rooms.pop(room["room_id"], None)
-        elif is_draw:
+    if not success:
+        # Defensive: the board changed between validation and drop.
+        safe_col = safe_legal_column(engine.get_board())
+        if safe_col is None:
             await manager.send_json(room["p1"]["ws"], "game_over", {
                 "winner": 0, "reason": "draw"
             })
             active_rooms.pop(room["room_id"], None)
+            return
+        ai_col = safe_col
+        glm_move = None  # The GLM move was not applied; do not send its reaction.
+        success, row = engine.drop_token(ai_col, player=2)
+        if not success:
+            return
+
+    is_win, win_coords = engine.check_win(row, ai_col)
+    is_draw = engine.is_draw()
+
+    room["current_turn"] = 1
+    update_payload = {
+        "board": engine.get_board(),
+        "last_move": {"player": 2, "row": row, "column": ai_col},
+        "current_turn": 1
+    }
+    await manager.send_json(room["p1"]["ws"], "board_update", update_payload)
+
+    if glm_move and glm_move.canned_reaction_id and not is_win:
+        await manager.send_json(room["p1"]["ws"], "broadcast_reaction", {
+            "from_player": 2,
+            "category": "phrase",
+            "id": glm_move.canned_reaction_id,
+        })
+
+    if is_win:
+        await manager.send_json(room["p1"]["ws"], "broadcast_reaction", {
+            "from_player": 2, "category": "phrase", "id": 5  # "Well played!"
+        })
+        await manager.send_json(room["p1"]["ws"], "game_over", {
+            "winner": 2, "reason": "connect4", "winning_coordinates": win_coords
+        })
+        active_rooms.pop(room["room_id"], None)
+    elif is_draw:
+        await manager.send_json(room["p1"]["ws"], "game_over", {
+            "winner": 0, "reason": "draw"
+        })
+        active_rooms.pop(room["room_id"], None)
 
 
-# Mount client static files
+# Serve the client SPA from the site root so index.html's relative asset paths
+# (css/style.css, js/*.js) resolve correctly. This mount MUST stay last:
+# Starlette matches routes in registration order, so /api/* and /ws/* defined
+# above still take precedence over the static catch-all.
 client_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "client"))
-if os.path.exists(client_dir):
-    app.mount("/static", StaticFiles(directory=client_dir), name="static")
-
-    @app.get("/")
-    async def serve_index():
-        return FileResponse(os.path.join(client_dir, "index.html"))
+if os.path.isdir(client_dir):
+    app.mount("/", StaticFiles(directory=client_dir, html=True), name="client")

@@ -30,8 +30,11 @@ htmlcov/
 .tox/
 
 # Environment & Credentials
+# Ignore every environment file, but keep committed examples.
 .env
-.env.local
+.env.*
+!.env.example
+!.env.*.example
 *.key
 *.pem
 

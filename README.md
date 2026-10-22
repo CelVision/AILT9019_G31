@@ -24,6 +24,8 @@ Contemporary digital social platforms rely almost exclusively on appearance-driv
 5. **Fail-Safe Heuristic Redundancy**: If upstream LLM APIs experience rate limits (HTTP 429), errors (HTTP 500), or latency ($>1.5\text{s}$), the backend seamlessly falls back to a deterministic local Minimax heuristic bot with zero socket drops.
 6. **Zero Persistent PII**: All user sessions and room memory exist strictly in RAM and are immediately purged upon socket disconnection.
 
+> **⚠️ Current sprint note (2026-10-21):** PvE is being validated against **GLM-4-Flash** first. Gemini integration is deferred. The Minimax fallback is temporarily unwired; if GLM is unavailable, the server plays a safe center-out move so the room never stalls. See [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md) for the current architecture and handoff notes.
+
 ---
 
 ## 🗂️ Documentation Navigation
@@ -33,6 +35,7 @@ All architectural, strategic, and task-tracking documents are organized in this 
 | Document | Path | Description |
 | :--- | :--- | :--- |
 | **Team Task Checklist** | [TASKS.md](file:///d:/Github%20Homepage/AILT9019_G31/TASKS.md) | **Start here for development!** Claim tasks, update statuses, and log backlog ideas. |
+| **Development Worklog** | [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md) | **Running handoff log:** decisions, completed changes, verification commands, and next steps. |
 | **Technical Specification** | [docs/TECHNICAL_SPEC.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/TECHNICAL_SPEC.md) | Full system architecture, WebSocket protocol frames, Connect Four physics, and test matrices. |
 | **Project Plan** | [docs/PROJECT_PLAN.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/PROJECT_PLAN.md) | Work Breakdown Structure (WBS), risk matrix, Gantt chart, and milestones through Oct 26. |
 | **Revised Proposal** | [docs/proposal/](file:///d:/Github%20Homepage/AILT9019_G31/docs/proposal/AILT9019_Revised_Proposal_G31.md) | Formal course proposal submission (`.md`, `.docx`, `.pdf`) with peer review responses. |
@@ -48,6 +51,7 @@ AILT9019_G31/
 ├── docs/                               # Engineering & course documentation
 │   ├── PROJECT_PLAN.md                 # WBS, milestones, sprint Gantt chart & risks
 │   ├── TECHNICAL_SPEC.md               # Protocols, data models, AI fallback & engine spec
+│   ├── WORKLOG.md                      # Running development log & handoff notes
 │   └── proposal/                       # Proposal submission documents
 │       ├── AILT9019_Revised_Proposal_G31.md
 │       ├── AILT9019_Revised_Proposal_G31.docx
@@ -63,21 +67,24 @@ AILT9019_G31/
 │       └── socket_client.js            # WebSocket protocol connection handler
 ├── server/                             # FastAPI backend service
 │   ├── requirements.txt                # Python dependencies
+│   ├── .env.example                    # GLM/AI settings template (never commit .env)
 │   └── app/
 │       ├── __init__.py
 │       ├── main.py                     # ASGI entrypoint & WebSocket endpoint (/ws/game)
-│       ├── config.py                   # App configuration & Gemini API keys
+│       ├── config.py                   # Environment-backed AI settings & secret hygiene
 │       ├── game_engine.py              # 7x6 Connect Four rules, win & draw logic
-│       ├── matchmaking.py              # In-memory FIFO queue & age filtering
-│       ├── room_manager.py             # Active room lifecycle & ephemeral state
+│       ├── matchmaking.py              # In-memory FIFO queue & age filtering (planned)
+│       ├── room_manager.py             # Active room lifecycle & ephemeral state (planned)
 │       ├── schemas.py                  # Pydantic protocol models & event payloads
 │       └── ai/
 │           ├── __init__.py
-│           ├── gemini_client.py        # Gemini 1.5 Flash client (JSON schema enforced)
+│           ├── glm_client.py           # GLM-4-Flash OpenAI-compatible client
 │           └── minimax_fallback.py     # Deterministic Alpha-Beta heuristic bot
 ├── tests/                              # Automated test suites & verification
-│   ├── __init__.py
 │   ├── test_connect4_engine.py         # Connect Four rules & win detection tests
+│   ├── test_app_smoke.py               # FastAPI root/static/health/WS smoke tests
+│   ├── test_glm_client.py              # Mocked GLM request/parse/validation tests
+│   ├── test_ai_turn.py                 # GLM PvE turn + safe-move fallback tests
 │   ├── test_suite_a_matchmaking.py     # Test Suite A: 20 age boundary cases
 │   └── test_suite_b_fault_injection.py # Test Suite B: 10 LLM fault injection tests
 └── deploy/                             # Production deployment configuration
@@ -92,7 +99,7 @@ AILT9019_G31/
 ### 1. Prerequisites
 - Python 3.12+ (or 3.14)
 - A modern web browser (Chrome, Edge, Safari, Firefox)
-- (Optional for AI) Google Gemini API Key (stored in `.env` or environment variable)
+- (Optional for AI) GLM API key (Zhipu/Z.ai), stored in `server/.env` or the server environment — never committed
 
 ### 2. Backend Setup
 ```bash
@@ -108,6 +115,13 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Configure the AI layer (optional for PvP; required for GLM PvE)
+# Windows PowerShell:
+Copy-Item .env.example .env
+# macOS / Linux:
+# cp .env.example .env
+# Then edit .env and set GLM_API_KEY=... Never commit the real .env.
 
 # Start the development server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
