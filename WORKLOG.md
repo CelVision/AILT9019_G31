@@ -4,12 +4,23 @@
 
 ---
 
+## 2026-10-22 — Model confirmation: GLM-4.7-Flash
+
+- **Endpoint confirmed:** `https://open.bigmodel.cn/api/paas/v4`, with `/chat/completions` appended by the client.
+- **Official API model ID:** `glm-4.7-flash` (lowercase). The display name is **GLM-4.7-Flash**; the uppercase `F` in the user-provided curl is display casing, so the code uses the lowercase API ID.
+- **Thinking disabled:** the GLM-4.7 family enables thinking by default. Because the game needs one small JSON object quickly, the request now sends `"thinking": {"type": "disabled"}` and keeps `max_tokens: 64`.
+- **Updated:** `server/.env`, `server/.env.example`, `server/app/config.py`, `server/app/ai/glm_client.py`, `tests/test_glm_client.py`, README, TASKS, and this worklog.
+- **Live test status:** the new model could not be verified yet because the account still returns provider `HTTP 429 / code 1302` (rate limit). A retest after the update also returned 429. The old `glm-4-flash` smoke success remains the only live latency sample.
+- **Next:** wait for the account rate-limit window, run `cd server; python -m app.ai.glm_client`, and record the latency with thinking disabled. If the model ID is rejected, check the provider console for the exact enabled model list.
+
+---
+
 ## 2026-10-22 — Pre-push evaluation
 
 - **Tests:** `python -m pytest tests/ -q` → **26 passed**, 2 existing `on_event` deprecation warnings.
 - **Syntax/whitespace:** `py_compile` OK; `git diff --check` clean.
 - **Secrets:** `server/.env` is ignored by Git; the live key is not present in any tracked file. The live key was shared in chat and should be rotated before public release or transcript sharing.
-- **Live GLM:** one full smoke request succeeded at **1737.9 ms** (`column: 3`). The account then hit provider `HTTP 429 / code 1302` rate limiting; `z.ai` returned the same limit. In-game fallback was verified on both 429 and a 2.5s timeout, but a successful in-game GLM turn is still blocked by the rate limit.
+- **Live GLM:** one full smoke request succeeded at **1737.9 ms** (`column: 3`) using the old `glm-4-flash` model. The account then hit provider `HTTP 429 / code 1302` rate limiting; `z.ai` returned the same limit. In-game fallback was verified on both 429 and a 2.5s timeout, but a successful in-game GLM turn is still blocked by the rate limit.
 - **Timeout:** `server/app/config.py`, `server/.env.example`, and the local `server/.env` use **2.5s**. The technical spec still says 1.5s; WP3-8 must update it or the decision must be reversed.
 - **Push target:** `origin/main` (`https://github.com/CelVision/AILT9019_G31.git`).
 
