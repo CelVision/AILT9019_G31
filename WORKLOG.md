@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-22 — GLM-4.7-FlashX probe: valid but unusable latency
+
+- `glm-4.7-flashx` (lowercase API ID) returns **200** with `thinking: disabled`, so the model is enabled for this account.
+- A trivial “Reply with OK” request took **28,361ms**.
+- A real client-prompt Connect Four request exceeded the **35s** probe timeout and raised `GLMError("timeout")`.
+- The latency makes this model unsuitable for a PvE turn with the current 2.5s target. It is not a drop-in replacement for GLM-4.7-Flash.
+- The best available fallback remains `glm-4.5-air` at ~2.28s; alternatively, enable `glm-4.7-flash` in the console.
+
+---
+
 ## 2026-10-22 — Model probe: GLM-4.5-Flash unavailable, GLM-4.5-Air works
 
 - `glm-4.5-flash` → `HTTP 429 / code 1302`, the same entitlement response as `glm-4.7-flash`. It is also absent from the account's `/models` list.
