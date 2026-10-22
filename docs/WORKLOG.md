@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-22 — Temporary switch: GLM-4.5-Air at 3.5s
+
+- Changed the runtime model to **`glm-4.5-air`** in `server/.env`, `server/.env.example`, and `server/app/config.py`; the allowlist now contains only that model.
+- Set `AI_TIMEOUT_SECONDS=3.5` because the live client prompt measured 2.28s and the standalone smoke measured 2.88s. This leaves margin for provider queueing without falling back unnecessarily.
+- Updated `tests/test_glm_client.py`, `README.md`, `TASKS.md`, and this worklog to describe the temporary model.
+- **Live smoke passed:** `{"column": 3, "canned_reaction_id": 0, "latency_ms": 2883.0, "model": "glm-4.5-air"}`.
+- **Tests:** `python -m pytest tests/ -q` → **26 passed**.
+- **Target unchanged:** restore `glm-4.7-flash` once the GLM console grants access. Do not treat `glm-4.5-air` as the final sprint model.
+
+---
+
 ## 2026-10-22 — GLM-4.7-FlashX probe: valid but unusable latency
 
 - `glm-4.7-flashx` (lowercase API ID) returns **200** with `thinking: disabled`, so the model is enabled for this account.

@@ -6,8 +6,9 @@ Welcome to the team task tracker! This document is designed for all team members
 
 ## 🗞️ Recent Updates
 
-- **2026-10-22** — `GLM-4.7-FlashX` is enabled (`200`) but unusably slow: a trivial call took **28.4s**, and a real Connect Four prompt exceeded **35s**. Not viable for the 2.5s turn target. Best available fallback remains `glm-4.5-air` (~2.28s); code remains on `glm-4.7-flash` pending a decision.
-- **2026-10-22** — Pre-push evaluation complete: **26 tests pass**, `server/.env` is ignored, and the live key is absent from tracked files. The old-model (`glm-4-flash`) smoke succeeded at **1737.9ms**, but provider `429 / code 1302` rate limiting still blocks a successful in-game turn. Local/code timeout is **2.5s**; the technical spec still says 1.5s (WP3-8). See the [worklog](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md).
+- **2026-10-22** — Switched the temporary PvE model to **`glm-4.5-air`** with a **3.5s** timeout. **Live smoke passed:** `column=3`, **2883.0ms**. The target remains `glm-4.7-flash` once the GLM console grants access. README, env template, config, tests, and worklog were updated; **26 tests pass**.
+- **2026-10-22** — `GLM-4.7-FlashX` is enabled (`200`) but unusably slow: a trivial call took **28.4s**, and a real Connect Four prompt exceeded **35s**. Not viable for the turn target.
+- **2026-10-22** — Pre-push evaluation (before the model switch): **26 tests pass**, `server/.env` is ignored, and the live key is absent from tracked files. The old-model (`glm-4-flash`) smoke succeeded at **1737.9ms**; at that time the timeout was 2.5s and the provider entitlement issue blocked a successful in-game turn. See the [worklog](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md).
 - **2026-10-21** — Completed **QW-1** (root static serving), **QW-2** (single-worker systemd + env file outside repo), **WP3-2** (GLM client, **live smoke passed**), and **WP3-5** (`config.py`, `.env.example`, `.gitignore` hardening). **WP3-3** (GLM turn handler + temporary safe move) is in review: live fallback worked on `429` and on a 2.5s timeout, but a successful in-game GLM turn is blocked by account rate limiting. Full suite is **26 passed**.
 
 ---
@@ -37,7 +38,7 @@ Welcome to the team task tracker! This document is designed for all team members
 | **WP0: Proposal & Admin** | Course submissions & reviews | 3 | 2 | 1 | 🟡 Final Polish |
 | **WP1: Frontend Client** | HTML5/Canvas UI & Canned Chat | 8 | 4 | 0 | 🟢 Underway (50%) |
 | **WP2: Backend Networking** | FastAPI, WebSockets & Queue | 7 | 3 | 0 | 🟢 Underway (43%) |
-| **WP3: AI & GLM** | GLM-4.7-Flash, model config & fallback | 8 | 3 | 1 | 🟡 GLM-first (38%, WP3-3 in review) |
+| **WP3: AI & GLM** | GLM-4.5-Air (temp), model config & fallback | 8 | 3 | 1 | 🟡 GLM-first (38%, WP3-3 in review) |
 | **WP4: Infrastructure & VPS**| Ubuntu VPS, Nginx SSL & WSS | 4 | 1 | 0 | 🟢 Configs Ready |
 | **WP5: Testing & Evaluation**| Suites A & B, 15-User Cohort | 6 | 1 | 0 | 🟢 Engine Tests Pass |
 
@@ -46,12 +47,12 @@ Welcome to the team task tracker! This document is designed for all team members
 ---
 
 > **⚠️ AI Direction Update — 2026-10-22 (GLM-first, no Gemini, Minimax deferred)**
-> - PvE calls **GLM-4.7-Flash** directly through an OpenAI-compatible endpoint, using a **server-side key**. Gemini is deferred and is not part of the current sprint.
-> - The client may let the player enter or select a **model name** (default API ID `glm-4.7-flash`). The server validates it against an allowlist; the key is never sent to the client.
+> - PvE calls **GLM-4.5-Air** temporarily through an OpenAI-compatible endpoint, using a **server-side key**. `glm-4.7-flash` remains the target once account access is enabled. Gemini is deferred and is not part of the current sprint.
+> - The client may let the player enter or select a **model name** (current default API ID `glm-4.5-air`). The server validates it against an allowlist; the key is never sent to the client.
 > - **Minimax is deliberately not wired during initial GLM testing.** This is a temporary deviation from `TECH_SPEC §5.2`. WP3-7 restores it before the checkpoint, or the deviation must be documented in the checkpoint report.
 > - Keys live only in `server/.env` locally and `/etc/connectfour/connectfour.env` on the VPS. Never commit, log, or send a key to the browser.
-> - **Old live check (2026-10-21, `glm-4-flash`):** the key was accepted and one move returned in **1737.9ms**. The 1.5s hard cap would reject it, so the code default and local `.env` use 2.5s pending a spec decision.
-> - **Model update (2026-10-22):** official API model ID is `glm-4.7-flash` (display name GLM-4.7-Flash). Thinking is explicitly disabled for game moves. Live verification of the new model is currently blocked by provider `429 / code 1302` account rate limiting.
+> - **Old live check (2026-10-21, `glm-4-flash`):** the key was accepted and one move returned in **1737.9ms**. The 1.5s hard cap would reject it; the timeout has since moved to 3.5s for the temporary `glm-4.5-air` model.
+> - **Model switch (2026-10-22):** `glm-4.7-flash` and `glm-4.5-flash` are not entitled for this account (429), and `glm-4.7-flashx` is unusably slow (>28s). Temporary default is now `glm-4.5-air`, which returned a legal move in **2279.3ms**; timeout is **3.5s**. Thinking is explicitly disabled. Restore `glm-4.7-flash` after enabling it in the GLM console.
 > - Test Suite B is deferred until the fallback path is restored; its 10 cases will mock the GLM adapter.
 
 ---
@@ -126,19 +127,19 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
   - Evaluation weights: 4-in-row (+100,000), 3-in-row (+500), 2-in-row (+50), center control (+30).
   - Benchmark execution time verified at ~23.6ms (<50ms target).
   - **Current status:** code complete and tested, but intentionally not wired while GLM is validated directly (see WP3-7).
-- [x] **[DONE]** `WP3-2`: Integrate **GLM-4.7-Flash** client (`server/app/ai/glm_client.py`) | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-23
+- [x] **[DONE]** `WP3-2`: Integrate GLM client (`server/app/ai/glm_client.py`; current model **GLM-4.5-Air**) | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-23
   - Call the Zhipu/Z.ai OpenAI-compatible `/chat/completions` endpoint with `httpx`; no Gemini SDK.
   - Read `GLM_API_KEY`, `GLM_BASE_URL`, `GLM_MODEL` from the server environment only.
   - Serialize board + legal columns; enforce JSON `{"column": int, "canned_reaction_id": int}`; validate the column against legal moves.
   - Include a standalone smoke test (`python -m app.ai.glm_client`) that prints one move and its latency.
   - **2026-10-21 (old model `glm-4-flash`):** client, prompt, JSON parsing/validation, and mock transport tests are implemented (10 mocked tests pass). **Live smoke test passed:** `{"column": 3, "latency_ms": 1737.9, "model": "glm-4-flash"}`. Gateway wiring is under WP3-3.
-  - **2026-10-22:** provider confirmed the base URL. Config switched to the official API ID `glm-4.7-flash` (display name GLM-4.7-Flash), and the request now sets `thinking: {"type": "disabled"}` for fast JSON moves. The key is valid (`GET /models` = 200), but `glm-4.7-flash` is absent from this account's model list and returns `429 / code 1302`; `glm-4.5-flash` returns the same 429. Available `glm-4.5-air` works: a real client prompt returned `column=3` in **2279.3ms**. `glm-4.7-flashx` is enabled but unusably slow: 28.4s for a trivial call and >35s for the real prompt. This is a model-entitlement/performance issue, not a key or account-rate-limit issue.
+  - **2026-10-22:** provider confirmed the base URL. The key is valid (`GET /models` = 200), but `glm-4.7-flash` and `glm-4.5-flash` are absent from this account's model list and return `429 / code 1302`. `glm-4.7-flashx` is enabled but unusably slow (28.4s trivial, >35s real prompt). **Current default is `glm-4.5-air`**, which returned `column=3` in **2279.3ms** on the client-prompt probe; the standalone smoke with the 3.5s timeout passed at **2883.0ms**. Restore `glm-4.7-flash` once it is enabled in the GLM console.
   - Provider note: `429 / code 1302` was previously treated as an account-wide rate limit, but later probes show the key and account are fine. The response is tied to models absent from the account's `/models` list (`glm-4.7-flash`, `glm-4-flash`); available models return 200. No retry/backoff is implemented yet.
 - [ ] **[REVIEW]** `WP3-3`: Build GLM timeout & orchestration wrapper (fallback deferred) | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-23
-  - Race the GLM request against `AI_TIMEOUT_SECONDS` (technical spec says 1.5s; code default and local env are now 2.5s after the 1.74s measurement — update the spec or reverse this).
+  - Race the GLM request against `AI_TIMEOUT_SECONDS` (current default **3.5s** for GLM-4.5-Air; the technical spec still says 1.5s — update it).
   - On timeout/HTTP error/malformed JSON/illegal column, play a temporary safe legal move (center-out) so the room never stalls; do **not** call Minimax yet.
   - Emit `pve_fallback_notice` with a non-secret reason. Restore the Minimax path in WP3-7 before Oct 26.
-  - **2026-10-21:** wired into `handle_ai_turn`; mocked GLM-success, GLM-error, and wait-for-timeout tests pass. **Live fallback verified:** GLM returned `429` once (handler time 1081.9ms) and a later call exceeded the 2.5s cap (handler time 2917.8ms); both fell back to the center move and passed the turn. A **successful in-game GLM turn is still pending** because of the account rate limit. A 1.5s cap would cancel the measured 1.74s smoke response; local `.env` uses 2.5s, which also timed out once. Decide 3–4s vs. optimize vs. accept fallback.
+  - **2026-10-21:** wired into `handle_ai_turn`; mocked GLM-success, GLM-error, and wait-for-timeout tests pass. **Live fallback verified:** GLM returned `429` once (handler time 1081.9ms) and a later call exceeded the 2.5s cap (handler time 2917.8ms); both fell back to the center move and passed the turn. **2026-10-22:** switched to `glm-4.5-air` with a **3.5s** timeout; the live success path can now be tested without the entitlement 429.
 - [ ] **[TODO]** `WP3-4`: Dual bot personalities stretch feature (`server/app/ai/`) | **Assignee**: @Unassigned | **Priority**: Low | **Due**: 2026-10-24
   - "Casual Explorer" (relaxed depth, frequent reaction stickers) vs. "Tactical Challenger" (depth 5, strategic play).
   - Deferred until the GLM path is stable.
@@ -148,7 +149,7 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
   - Completed 2026-10-21: added `server/app/config.py`, `server/.env.example`, package `__init__.py` files, and `tests/test_app_smoke.py`; removed unused `google-genai`.
   - Verified: no-key → `enabled=False`; dummy-key → allowlist/timeout parsed; `.env.example` is not ignored.
 - [ ] **[TODO]** `WP3-6`: Add optional model-name selector + server allowlist | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-22
-  - Onboarding field defaults to `glm-4.7-flash`; the server accepts only allowlisted names.
+  - Onboarding field defaults to `glm-4.5-air` (temporary; target `glm-4.7-flash`); the server accepts only allowlisted names.
   - Invalid model returns a clear error; never forward arbitrary strings to the provider.
 - [ ] **[TODO]** `WP3-7`: Re-enable Minimax fallback before the checkpoint | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-24
   - Restore the `pve_fallback_notice` + Minimax path after GLM validation; then run Suite B.

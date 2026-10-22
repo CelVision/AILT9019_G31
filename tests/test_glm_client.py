@@ -1,5 +1,5 @@
 """
-Mocked tests for the GLM-4.7-Flash adapter.
+Mocked tests for the GLM adapter (current model: GLM-4.5-Air).
 
 No real API key or network access is required: every request goes through an
 httpx.MockTransport. Live verification is the standalone smoke test:
@@ -23,11 +23,11 @@ EMPTY_BOARD = [[0 for _ in range(7)] for _ in range(6)]
 LEGAL = [0, 1, 2, 3, 4, 5, 6]
 
 
-def settings(api_key: str | None = "test-key", allowed=("glm-4.7-flash",)) -> AISettings:
+def settings(api_key: str | None = "test-key", allowed=("glm-4.5-air",)) -> AISettings:
     return AISettings(
         api_key=api_key,
         base_url="https://glm.example.test/api/paas/v4",
-        default_model="glm-4.7-flash",
+        default_model="glm-4.5-air",
         allowed_models=allowed,
         timeout_seconds=1.0,
     )
@@ -71,7 +71,7 @@ def test_request_sends_auth_and_parses_move():
         assert request.url.path.endswith("/chat/completions")
         assert request.headers.get("authorization") == "Bearer test-key"
         body = json.loads(request.read())
-        assert body["model"] == "glm-4.7-flash"
+        assert body["model"] == "glm-4.5-air"
         assert body["thinking"] == {"type": "disabled"}
 
     move = asyncio.run(

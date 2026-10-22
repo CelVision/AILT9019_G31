@@ -17,11 +17,11 @@ SERVER_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(SERVER_DIR / ".env")
 
 DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
-DEFAULT_MODEL = "glm-4.7-flash"
-# The proposal specifies 2.5s; the older technical spec says 1.5s. The live
-# GLM smoke test measured 1.74s, so 1.5s would reject valid replies. Keep this
-# configurable and update the formal spec before the checkpoint.
-DEFAULT_TIMEOUT_SECONDS = 2.5
+DEFAULT_MODEL = "glm-4.5-air"
+# Temporary model while GLM-4.7-Flash access is enabled. The live Connect Four
+# prompt measured ~2.3–2.9s, so 3.5s leaves margin for provider queueing/jitter.
+# The older technical spec still says 1.5s; update it before the checkpoint.
+DEFAULT_TIMEOUT_SECONDS = 3.5
 
 
 @dataclass(frozen=True)

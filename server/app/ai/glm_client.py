@@ -1,4 +1,4 @@
-"""GLM-4.7-Flash client for the PvE opponent.
+"""GLM client for the PvE opponent (currently GLM-4.5-Air).
 
 The provider exposes an OpenAI-compatible ``/chat/completions`` endpoint. This
 module keeps the network call, prompt, parsing, and validation in one place so

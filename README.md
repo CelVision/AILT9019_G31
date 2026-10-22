@@ -7,7 +7,7 @@
 [![Course](https://img.shields.io/badge/Course-AILT9019_AI_Literacy_II-blue.svg)](https://moodle.hku.hk/)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_WebSocket-009688.svg)](https://fastapi.tiangolo.com/)
-[![LLM](https://img.shields.io/badge/AI_Core-Google_Gemini_1.5_Flash-orange.svg)](https://ai.google.dev/)
+[![LLM](https://img.shields.io/badge/AI_Core-GLM_4.5_Air-orange.svg)](https://open.bigmodel.cn/)
 [![Status](https://img.shields.io/badge/Status-Sprint_1_Underway-success.svg)](#-sprint-roadmap--team-tasks)
 
 ---
@@ -20,11 +20,11 @@ Contemporary digital social platforms rely almost exclusively on appearance-driv
 1. **Activity-First Socializing**: Interpersonal interaction takes place within a live, turn-based 7×6 Connect Four game. The shared game rules eliminate awkward pauses and lower emotional stakes.
 2. **Safe Canned Communication**: Free-form text input is completely omitted by design. Players interact exclusively using a sportsmanship palette of **6 preset phrases** and **4 reaction stickers** with animated speech bubbles.
 3. **Age-Gated In-Memory Matchmaking**: Players complete lightweight guest registration (Nickname + Birth Year). The backend enforces $\text{Age} \ge 18$ and pairs users with peers within an acceptable age difference ($|\Delta\text{Age}| \le 3$).
-4. **Guaranteed Zero-Wait Availability (AI Fallback)**: If a human peer is not found within the 15-second matchmaking queue, the server automatically routes the player into a PvE room with an intelligent **Google Gemini 1.5 Flash** opponent.
-5. **Fail-Safe Heuristic Redundancy**: If upstream LLM APIs experience rate limits (HTTP 429), errors (HTTP 500), or latency ($>1.5\text{s}$), the backend seamlessly falls back to a deterministic local Minimax heuristic bot with zero socket drops.
+4. **Guaranteed Zero-Wait Availability (AI Fallback)**: If a human peer is not found within the 15-second matchmaking queue, the server automatically routes the player into a PvE room with an intelligent **GLM-4.5-Air** opponent (temporary; **GLM-4.7-Flash** is the target once account access is enabled).
+5. **Fail-Safe Fallback**: If the upstream LLM returns a rate-limit/error response or exceeds the **3.5s** move deadline, the server immediately plays a safe center-out legal move so the room never stalls; the deterministic Minimax bot is retained and will be re-wired in WP3-7.
 6. **Zero Persistent PII**: All user sessions and room memory exist strictly in RAM and are immediately purged upon socket disconnection.
 
-> **⚠️ Current sprint note (2026-10-22):** PvE is being validated against **GLM-4.7-Flash** first. Gemini integration is deferred. The Minimax fallback is temporarily unwired; if GLM is unavailable, the server plays a safe center-out move so the room never stalls. See [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md) for the current architecture and handoff notes.
+> **⚠️ Current sprint note (2026-10-22):** PvE temporarily uses **GLM-4.5-Air** because this account cannot yet access `glm-4.7-flash` or `glm-4.5-flash`. The live Connect Four prompt measured **~2.3–2.9s**, so the local deadline is **3.5s**. **GLM-4.7-Flash** remains the target once it is enabled in the GLM console. Gemini integration is deferred. The Minimax fallback is temporarily unwired; if GLM is unavailable, the server plays a safe center-out move so the room never stalls. See [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md) for the current architecture and handoff notes.
 
 ---
 
@@ -78,7 +78,7 @@ AILT9019_G31/
 │       ├── schemas.py                  # Pydantic protocol models & event payloads
 │       └── ai/
 │           ├── __init__.py
-│           ├── glm_client.py           # GLM-4.7-Flash OpenAI-compatible client
+│           ├── glm_client.py           # GLM-4.5-Air OpenAI-compatible client (temporary)
 │           └── minimax_fallback.py     # Deterministic Alpha-Beta heuristic bot
 ├── tests/                              # Automated test suites & verification
 │   ├── test_connect4_engine.py         # Connect Four rules & win detection tests
@@ -157,7 +157,7 @@ To keep development organized and aligned with our proposal milestones:
 3. **Branching Convention**:
    - `feat/wp1-canvas-renderer`
    - `feat/wp2-websocket-gateway`
-   - `feat/wp3-gemini-ai`
+   - `feat/wp3-glm-ai`
    - `fix/connect4-diagonal-check`
 4. **Testing Before Merge**: Ensure all unit tests pass before committing:
    ```bash
@@ -173,7 +173,7 @@ To keep development organized and aligned with our proposal milestones:
 | :--- | :--- | :--- |
 | **Sat, Oct 10 (Week 6)** | Proposal Final Submission | Submit Revised Proposal PDF via Moodle form |
 | **Sun, Oct 11 (Week 6)** | Sprint 1 Review | Local 2-player PvP prototype working over WebSockets |
-| **Sun, Oct 18 (Week 7)** | Sprint 2 Review | Cloud VPS deployment + Gemini 1.5 Flash AI integration |
+| **Sun, Oct 18 (Week 7)** | Sprint 2 Review | Cloud VPS deployment + GLM AI integration |
 | **Sun, Oct 25 (Week 8)** | Sprint 3 Review | 100% pass on Test Suites A & B; 15-student user trials completed |
 | **Mon, Oct 26** | **Mid-Term Checkpoint** | Live public URL + walkthrough demo video + progress report |
 
