@@ -1,5 +1,5 @@
 """
-Mocked tests for the GLM-4-Flash adapter.
+Mocked tests for the GLM-4.7-Flash adapter.
 
 No real API key or network access is required: every request goes through an
 httpx.MockTransport. Live verification is the standalone smoke test:
@@ -7,6 +7,7 @@ httpx.MockTransport. Live verification is the standalone smoke test:
 """
 
 import asyncio
+import json
 import os
 import sys
 
@@ -22,11 +23,11 @@ EMPTY_BOARD = [[0 for _ in range(7)] for _ in range(6)]
 LEGAL = [0, 1, 2, 3, 4, 5, 6]
 
 
-def settings(api_key: str | None = "test-key", allowed=("glm-4-flash",)) -> AISettings:
+def settings(api_key: str | None = "test-key", allowed=("glm-4.7-flash",)) -> AISettings:
     return AISettings(
         api_key=api_key,
         base_url="https://glm.example.test/api/paas/v4",
-        default_model="glm-4-flash",
+        default_model="glm-4.7-flash",
         allowed_models=allowed,
         timeout_seconds=1.0,
     )
@@ -69,7 +70,9 @@ def test_request_sends_auth_and_parses_move():
     def check(request: httpx.Request) -> None:
         assert request.url.path.endswith("/chat/completions")
         assert request.headers.get("authorization") == "Bearer test-key"
-        assert b'"model":"glm-4-flash"' in request.read() or b'"model": "glm-4-flash"' in request.read()
+        body = json.loads(request.read())
+        assert body["model"] == "glm-4.7-flash"
+        assert body["thinking"] == {"type": "disabled"}
 
     move = asyncio.run(
         request_glm_move(

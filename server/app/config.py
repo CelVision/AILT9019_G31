@@ -17,7 +17,7 @@ SERVER_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(SERVER_DIR / ".env")
 
 DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
-DEFAULT_MODEL = "glm-4-flash"
+DEFAULT_MODEL = "glm-4.7-flash"
 # The proposal specifies 2.5s; the older technical spec says 1.5s. The live
 # GLM smoke test measured 1.74s, so 1.5s would reject valid replies. Keep this
 # configurable and update the formal spec before the checkpoint.

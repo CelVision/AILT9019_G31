@@ -1,4 +1,4 @@
-"""GLM-4-Flash client for the PvE opponent.
+"""GLM-4.7-Flash client for the PvE opponent.
 
 The provider exposes an OpenAI-compatible ``/chat/completions`` endpoint. This
 module keeps the network call, prompt, parsing, and validation in one place so
@@ -155,6 +155,9 @@ async def request_glm_move(
     payload = {
         "model": selected_model,
         "messages": build_messages(board, legal),
+        # GLM-4.7 enables thinking by default. A game move needs one small JSON
+        # object quickly, so disable reasoning tokens for this call.
+        "thinking": {"type": "disabled"},
         "temperature": 0.2,
         "max_tokens": 64,
         "stream": False,

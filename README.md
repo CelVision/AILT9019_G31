@@ -24,7 +24,7 @@ Contemporary digital social platforms rely almost exclusively on appearance-driv
 5. **Fail-Safe Heuristic Redundancy**: If upstream LLM APIs experience rate limits (HTTP 429), errors (HTTP 500), or latency ($>1.5\text{s}$), the backend seamlessly falls back to a deterministic local Minimax heuristic bot with zero socket drops.
 6. **Zero Persistent PII**: All user sessions and room memory exist strictly in RAM and are immediately purged upon socket disconnection.
 
-> **⚠️ Current sprint note (2026-10-21):** PvE is being validated against **GLM-4-Flash** first. Gemini integration is deferred. The Minimax fallback is temporarily unwired; if GLM is unavailable, the server plays a safe center-out move so the room never stalls. See [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md) for the current architecture and handoff notes.
+> **⚠️ Current sprint note (2026-10-22):** PvE is being validated against **GLM-4.7-Flash** first. Gemini integration is deferred. The Minimax fallback is temporarily unwired; if GLM is unavailable, the server plays a safe center-out move so the room never stalls. See [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md) for the current architecture and handoff notes.
 
 ---
 
@@ -78,7 +78,7 @@ AILT9019_G31/
 │       ├── schemas.py                  # Pydantic protocol models & event payloads
 │       └── ai/
 │           ├── __init__.py
-│           ├── glm_client.py           # GLM-4-Flash OpenAI-compatible client
+│           ├── glm_client.py           # GLM-4.7-Flash OpenAI-compatible client
 │           └── minimax_fallback.py     # Deterministic Alpha-Beta heuristic bot
 ├── tests/                              # Automated test suites & verification
 │   ├── test_connect4_engine.py         # Connect Four rules & win detection tests

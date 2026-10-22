@@ -6,7 +6,8 @@ Welcome to the team task tracker! This document is designed for all team members
 
 ## 🗞️ Recent Updates
 
-- **2026-10-22** — Pre-push evaluation complete: **26 tests pass**, `server/.env` is ignored, and the live key is absent from tracked files. Live GLM smoke succeeded at **1737.9ms**, but provider `429 / code 1302` rate limiting still blocks a successful in-game turn. Local/code timeout is **2.5s**; the technical spec still says 1.5s (WP3-8). See the [worklog](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md).
+- **2026-10-22** — Model/API confirmed: config now uses the official API ID `glm-4.7-flash` (display name GLM-4.7-Flash), with thinking disabled for fast JSON game moves. Live verification of the new model is currently blocked by provider `429 / code 1302` rate limiting.
+- **2026-10-22** — Pre-push evaluation complete: **26 tests pass**, `server/.env` is ignored, and the live key is absent from tracked files. The old-model (`glm-4-flash`) smoke succeeded at **1737.9ms**, but provider `429 / code 1302` rate limiting still blocks a successful in-game turn. Local/code timeout is **2.5s**; the technical spec still says 1.5s (WP3-8). See the [worklog](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md).
 - **2026-10-21** — Completed **QW-1** (root static serving), **QW-2** (single-worker systemd + env file outside repo), **WP3-2** (GLM client, **live smoke passed**), and **WP3-5** (`config.py`, `.env.example`, `.gitignore` hardening). **WP3-3** (GLM turn handler + temporary safe move) is in review: live fallback worked on `429` and on a 2.5s timeout, but a successful in-game GLM turn is blocked by account rate limiting. Full suite is **26 passed**.
 
 ---
@@ -36,7 +37,7 @@ Welcome to the team task tracker! This document is designed for all team members
 | **WP0: Proposal & Admin** | Course submissions & reviews | 3 | 2 | 1 | 🟡 Final Polish |
 | **WP1: Frontend Client** | HTML5/Canvas UI & Canned Chat | 8 | 4 | 0 | 🟢 Underway (50%) |
 | **WP2: Backend Networking** | FastAPI, WebSockets & Queue | 7 | 3 | 0 | 🟢 Underway (43%) |
-| **WP3: AI & GLM** | GLM-4-Flash, model config & fallback | 8 | 3 | 1 | 🟡 GLM-first (38%, WP3-3 in review) |
+| **WP3: AI & GLM** | GLM-4.7-Flash, model config & fallback | 8 | 3 | 1 | 🟡 GLM-first (38%, WP3-3 in review) |
 | **WP4: Infrastructure & VPS**| Ubuntu VPS, Nginx SSL & WSS | 4 | 1 | 0 | 🟢 Configs Ready |
 | **WP5: Testing & Evaluation**| Suites A & B, 15-User Cohort | 6 | 1 | 0 | 🟢 Engine Tests Pass |
 
@@ -44,12 +45,13 @@ Welcome to the team task tracker! This document is designed for all team members
 
 ---
 
-> **⚠️ AI Direction Update — 2026-10-21 (GLM-first, no Gemini, Minimax deferred)**
-> - PvE calls **GLM-4-Flash** directly through an OpenAI-compatible endpoint, using a **server-side key**. Gemini is deferred and is not part of the current sprint.
-> - The client may let the player enter or select a **model name** (default `glm-4-flash`). The server validates it against an allowlist; the key is never sent to the client.
+> **⚠️ AI Direction Update — 2026-10-22 (GLM-first, no Gemini, Minimax deferred)**
+> - PvE calls **GLM-4.7-Flash** directly through an OpenAI-compatible endpoint, using a **server-side key**. Gemini is deferred and is not part of the current sprint.
+> - The client may let the player enter or select a **model name** (default API ID `glm-4.7-flash`). The server validates it against an allowlist; the key is never sent to the client.
 > - **Minimax is deliberately not wired during initial GLM testing.** This is a temporary deviation from `TECH_SPEC §5.2`. WP3-7 restores it before the checkpoint, or the deviation must be documented in the checkpoint report.
 > - Keys live only in `server/.env` locally and `/etc/connectfour/connectfour.env` on the VPS. Never commit, log, or send a key to the browser.
-> - **Live GLM check (2026-10-21):** the key was accepted and one `glm-4-flash` move returned in **1737.9ms**. The 1.5s hard cap would reject it, so the code default and local `.env` use 2.5s pending a spec decision. Rapid calls returned provider `429 / code 1302` (account rate limit).
+> - **Old live check (2026-10-21, `glm-4-flash`):** the key was accepted and one move returned in **1737.9ms**. The 1.5s hard cap would reject it, so the code default and local `.env` use 2.5s pending a spec decision.
+> - **Model update (2026-10-22):** official API model ID is `glm-4.7-flash` (display name GLM-4.7-Flash). Thinking is explicitly disabled for game moves. Live verification of the new model is currently blocked by provider `429 / code 1302` account rate limiting.
 > - Test Suite B is deferred until the fallback path is restored; its 10 cases will mock the GLM adapter.
 
 ---
@@ -124,12 +126,13 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
   - Evaluation weights: 4-in-row (+100,000), 3-in-row (+500), 2-in-row (+50), center control (+30).
   - Benchmark execution time verified at ~23.6ms (<50ms target).
   - **Current status:** code complete and tested, but intentionally not wired while GLM is validated directly (see WP3-7).
-- [x] **[DONE]** `WP3-2`: Integrate **GLM-4-Flash** client (`server/app/ai/glm_client.py`) | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-23
+- [x] **[DONE]** `WP3-2`: Integrate **GLM-4.7-Flash** client (`server/app/ai/glm_client.py`) | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-23
   - Call the Zhipu/Z.ai OpenAI-compatible `/chat/completions` endpoint with `httpx`; no Gemini SDK.
   - Read `GLM_API_KEY`, `GLM_BASE_URL`, `GLM_MODEL` from the server environment only.
   - Serialize board + legal columns; enforce JSON `{"column": int, "canned_reaction_id": int}`; validate the column against legal moves.
   - Include a standalone smoke test (`python -m app.ai.glm_client`) that prints one move and its latency.
-  - **2026-10-21:** client, prompt, JSON parsing/validation, and mock transport tests are implemented (10 mocked tests pass). **Live smoke test passed:** `{"column": 3, "latency_ms": 1737.9, "model": "glm-4-flash"}`. Gateway wiring is under WP3-3.
+  - **2026-10-21 (old model `glm-4-flash`):** client, prompt, JSON parsing/validation, and mock transport tests are implemented (10 mocked tests pass). **Live smoke test passed:** `{"column": 3, "latency_ms": 1737.9, "model": "glm-4-flash"}`. Gateway wiring is under WP3-3.
+  - **2026-10-22:** provider confirmed the base URL. Config switched to the official API ID `glm-4.7-flash` (display name GLM-4.7-Flash), and the request now sets `thinking: {"type": "disabled"}` for fast JSON moves. Retested after the update; still blocked by `429 / code 1302` account rate limiting.
   - Provider note: rapid calls returned `HTTP 429 / code 1302` (account rate limit); later 90s cooldowns still returned 429. The z.ai endpoint returned the same 429, so it is account-level. No retry/backoff is implemented yet.
 - [ ] **[REVIEW]** `WP3-3`: Build GLM timeout & orchestration wrapper (fallback deferred) | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-23
   - Race the GLM request against `AI_TIMEOUT_SECONDS` (technical spec says 1.5s; code default and local env are now 2.5s after the 1.74s measurement — update the spec or reverse this).
@@ -145,7 +148,7 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
   - Completed 2026-10-21: added `server/app/config.py`, `server/.env.example`, package `__init__.py` files, and `tests/test_app_smoke.py`; removed unused `google-genai`.
   - Verified: no-key → `enabled=False`; dummy-key → allowlist/timeout parsed; `.env.example` is not ignored.
 - [ ] **[TODO]** `WP3-6`: Add optional model-name selector + server allowlist | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-22
-  - Onboarding field defaults to `glm-4-flash`; the server accepts only allowlisted names.
+  - Onboarding field defaults to `glm-4.7-flash`; the server accepts only allowlisted names.
   - Invalid model returns a clear error; never forward arbitrary strings to the provider.
 - [ ] **[TODO]** `WP3-7`: Re-enable Minimax fallback before the checkpoint | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-24
   - Restore the `pve_fallback_notice` + Minimax path after GLM validation; then run Suite B.
