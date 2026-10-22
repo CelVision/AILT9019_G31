@@ -4,12 +4,17 @@
 
 ---
 
-## 2026-10-22 — GLM retry still blocked by account-wide 429
+## 2026-10-22 — GLM 429 diagnosed: model access, not the key
 
 - Retried `cd server; python -m app.ai.glm_client` immediately and again after a two-minute cooldown; both returned `HTTP 429 / code 1302`.
-- Probed the old `glm-4-flash` model once: it returned the **same 429**. The limit is therefore account-wide, not specific to `glm-4.7-flash` or to the new `thinking: disabled` payload.
-- The 429 response has no `Retry-After` header. The provider's rate-limit docs describe `1302` as an account concurrency/rate limit and recommend checking the account's rate-limit and equity pages in the console.
-- No code changes were needed for this retry; the suite remains **26 passed**.
+- The 429 is **not account-wide**. With the same key:
+  - `GET /api/paas/v4/models` returns **200** (the key is valid).
+  - `glm-5.3-flash` returns **200**.
+  - `glm-4.7` returns **200** (`thinking: disabled`, 4.96s).
+  - `glm-4.7-flash` returns **429 / 1302**.
+- The key's model list contains `glm-4.7`, `glm-5.3-flash`, etc., but **not `glm-4.7-flash`** (and not `glm-4-flash`). The 429 is therefore a model-entitlement/availability response, not a key problem. The console can show the key as "unused" because the failed calls never reach a model.
+- The docs still list `glm-4.7-flash` and link a trial center. Next step: claim/enable GLM-4.7-Flash for this account, or temporarily use an available model. `glm-5.3-flash` requires `thinking` set to `low`, `high`, or `max` (it rejects `disabled`).
+- No application code changes were made for this diagnosis; the suite remains **26 passed**.
 
 ---
 
