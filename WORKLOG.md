@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-22 — Model probe: GLM-4.5-Flash unavailable, GLM-4.5-Air works
+
+- `glm-4.5-flash` → `HTTP 429 / code 1302`, the same entitlement response as `glm-4.7-flash`. It is also absent from the account's `/models` list.
+- `glm-4.5-air` → **200**. This is the closest available lightweight model in the account list.
+- A real client-prompt probe with `glm-4.5-air` and `thinking: disabled` returned a legal move: `column=3`, `canned_reaction_id=0`, **latency 2279.3ms** (measured with a 5s probe timeout). That fits the current 2.5s cap only narrowly; a 3.0–3.5s timeout would be safer.
+- Recommendation: use `glm-4.5-air` temporarily to unblock the demo, or claim/enable `glm-4.7-flash` in the console and keep the requested model. No application code changed yet.
+
+---
+
 ## 2026-10-22 — GLM 429 diagnosed: model access, not the key
 
 - Retried `cd server; python -m app.ai.glm_client` immediately and again after a two-minute cooldown; both returned `HTTP 429 / code 1302`.
