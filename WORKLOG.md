@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-23 — XIANG HANCHENG deployment implementation
+
+- **Branch:** `deploy_XIANG-HANCHENG`, based on `3726563`. The old deployment PR #1 is closed; this work uses the team member's existing branch.
+- **Structure:** all container files and the endpoint checker are under `deploy/`; regression tests are under `tests/`; changes are recorded in `docs/CHANGELOG.md`. Setup and rollback instructions are in the existing README. No new top-level directory or CI workflow is included.
+- **Implementation:** non-root, single-worker Docker image; Compose with loopback port binding, runtime GLM settings, health checks, a read-only filesystem and bounded logs; HTTP/assets/WS/WSS checker; journald logging and systemd service restrictions.
+- **Reproduction:** from the repository root, run `docker compose -f deploy/compose.yaml up --build --detach --wait --wait-timeout 120`, then check the running origin with `python deploy/check_public_url.py http://127.0.0.1:8000` in the project's Python environment.
+- **Verification on this branch:** Python 3.12.14, `python -m pytest tests/ -q` returned **42 passed, 3 existing deprecation warnings in 1.40s**. Checked that Compose resolves its build context to the repository root and uses `deploy/Dockerfile` with the adjacent Dockerfile-specific ignore file. Verified that the image recipe, ignore rules, checker and Compose runtime settings match the previously tested implementation. Documentation links and Git whitespace checks passed.
+- **Limits:** Docker is not installed locally, so the reorganized container layout has not been built here. Historical container/systemd/Nginx HTTPS/WSS CI evidence for the prior `f78356b` implementation is linked in the changelog; it is not a CI result for this branch. Public VPS/domain/certificate setup and full game/manual accessibility acceptance are still pending. The prior UI accessibility changes remain reverted.
+
+---
+
 ## 2026-10-22 — Temporary switch: GLM-4.5-Air at 3.5s
 
 - Changed the runtime model to **`glm-4.5-air`** in `server/.env`, `server/.env.example`, and `server/app/config.py`; the allowlist now contains only that model.
