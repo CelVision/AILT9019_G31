@@ -22,9 +22,9 @@ Contemporary digital social platforms rely almost exclusively on appearance-driv
 3. **Age-Gated In-Memory Matchmaking**: Players complete lightweight guest registration (Nickname + Birth Year). The backend enforces $\text{Age} \ge 18$ and pairs users with peers within an acceptable age difference ($|\Delta\text{Age}| \le 3$).
 4. **Guaranteed Zero-Wait Availability (AI Fallback)**: If a human peer is not found within the 15-second matchmaking queue, the server automatically routes the player into a PvE room with an intelligent **GLM-4.5-Air** opponent (temporary; **GLM-4.7-Flash** is the target once account access is enabled).
 5. **Fail-Safe Fallback**: If the upstream LLM returns a rate-limit/error response or exceeds the **3.5s** move deadline, the server immediately plays a safe center-out legal move so the room never stalls; the deterministic Minimax bot is retained and will be re-wired in WP3-7.
-6. **Zero Persistent PII**: All user sessions and room memory exist strictly in RAM and are immediately purged upon socket disconnection.
+6. **Zero Persistent PII**: User sessions and rooms are stored in RAM. Disconnect cleanup still has known gaps; see [the repository review](docs/MIDTERM_REPOSITORY_REVIEW.md).
 
-> **⚠️ Current sprint note (2026-10-22):** PvE temporarily uses **GLM-4.5-Air** because this account cannot yet access `glm-4.7-flash` or `glm-4.5-flash`. The live Connect Four prompt measured **~2.3–2.9s**, so the local deadline is **3.5s**. **GLM-4.7-Flash** remains the target once it is enabled in the GLM console. Gemini integration is deferred. The Minimax fallback is temporarily unwired; if GLM is unavailable, the server plays a safe center-out move so the room never stalls. See [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md) for the current architecture and handoff notes.
+> **⚠️ Current sprint note (2026-10-22):** PvE temporarily uses **GLM-4.5-Air** because this account cannot yet access `glm-4.7-flash` or `glm-4.5-flash`. The live Connect Four prompt measured **~2.3–2.9s**, so the local deadline is **3.5s**. **GLM-4.7-Flash** remains the target once it is enabled in the GLM console. Gemini integration is deferred. The Minimax fallback is temporarily unwired; if GLM is unavailable, the server plays a safe center-out move so the room never stalls. See [docs/WORKLOG.md](docs/WORKLOG.md) for the current architecture and handoff notes.
 
 ---
 
@@ -34,11 +34,13 @@ All architectural, strategic, and task-tracking documents are organized in this 
 
 | Document | Path | Description |
 | :--- | :--- | :--- |
-| **Team Task Checklist** | [TASKS.md](file:///d:/Github%20Homepage/AILT9019_G31/TASKS.md) | **Start here for development!** Claim tasks, update statuses, and log backlog ideas. |
-| **Development Worklog** | [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md) | **Running handoff log:** decisions, completed changes, verification commands, and next steps. |
-| **Technical Specification** | [docs/TECHNICAL_SPEC.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/TECHNICAL_SPEC.md) | Full system architecture, WebSocket protocol frames, Connect Four physics, and test matrices. |
-| **Project Plan** | [docs/PROJECT_PLAN.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/PROJECT_PLAN.md) | Work Breakdown Structure (WBS), risk matrix, Gantt chart, and milestones through Oct 26. |
-| **Revised Proposal** | [docs/proposal/](file:///d:/Github%20Homepage/AILT9019_G31/docs/proposal/AILT9019_Revised_Proposal_G31.md) | Formal course proposal submission (`.md`, `.docx`, `.pdf`) with peer review responses. |
+| **Deployment guide** | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Docker/Compose, native systemd, HTTPS/WSS, verification and rollback. |
+| **Changelog** | [CHANGELOG.md](CHANGELOG.md) | Current changes and historical contributions, including reverted work. |
+| **Team Task Checklist** | [TASKS.md](TASKS.md) | **Start here for development!** Claim tasks, update statuses, and log backlog ideas. |
+| **Development Worklog** | [docs/WORKLOG.md](docs/WORKLOG.md) | **Running handoff log:** decisions, completed changes, verification commands, and next steps. |
+| **Technical Specification** | [docs/TECHNICAL_SPEC.md](docs/TECHNICAL_SPEC.md) | Full system architecture, WebSocket protocol frames, Connect Four physics, and test matrices. |
+| **Project Plan** | [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) | Work Breakdown Structure (WBS), risk matrix, Gantt chart, and milestones through Oct 26. |
+| **Revised Proposal** | [docs/proposal/](docs/proposal/AILT9019_Revised_Proposal_G31.md) | Formal course proposal submission (`.md`, `.docx`, `.pdf`) with peer review responses. |
 
 ---
 
@@ -46,6 +48,8 @@ All architectural, strategic, and task-tracking documents are organized in this 
 
 ```
 AILT9019_G31/
+├── Dockerfile                          # Non-root, single-worker application image
+├── compose.yaml                        # Loopback deployment with runtime settings
 ├── README.md                           # Main repository overview & getting started guide
 ├── TASKS.md                            # Collaborative team task checklist & sprint board
 ├── docs/                               # Engineering & course documentation
@@ -85,9 +89,11 @@ AILT9019_G31/
 │   ├── test_app_smoke.py               # FastAPI root/static/health/WS smoke tests
 │   ├── test_glm_client.py              # Mocked GLM request/parse/validation tests
 │   ├── test_ai_turn.py                 # GLM PvE turn + safe-move fallback tests
-│   ├── test_suite_a_matchmaking.py     # Test Suite A: 20 age boundary cases
-│   └── test_suite_b_fault_injection.py # Test Suite B: 10 LLM fault injection tests
+│   ├── test_deployment_check.py        # HTTP/WS deployment checker regression tests
+│   ├── test_suite_a_matchmaking.py     # Planned: 20 age boundary cases
+│   └── test_suite_b_fault_injection.py # Planned: 10 LLM fault injection tests
 └── deploy/                             # Production deployment configuration
+    ├── check_public_url.py             # Health, assets and WebSocket verification
     ├── nginx.conf                      # Nginx reverse proxy with SSL & WSS
     └── connectfour.service             # Systemd daemon service configuration
 ```
@@ -101,50 +107,43 @@ AILT9019_G31/
 - A modern web browser (Chrome, Edge, Safari, Firefox)
 - (Optional for AI) GLM API key (Zhipu/Z.ai), stored in `server/.env` or the server environment — never committed
 
-### 2. Backend Setup
+### 2. Local setup
+Run from the repository root:
+
 ```bash
-# Navigate to server directory
-cd server
-
-# Create and activate virtual environment
-python -m venv venv
-# On Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-# On macOS / Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure the AI layer (optional for PvP; required for GLM PvE)
-# Windows PowerShell:
-Copy-Item .env.example .env
+python3 -m venv .venv
 # macOS / Linux:
-# cp .env.example .env
-# Then edit .env and set GLM_API_KEY=... Never commit the real .env.
-
-# Start the development server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -r server/requirements.txt
+python -m uvicorn app.main:app --app-dir server --host 127.0.0.1 --port 8000 --workers 1
 ```
-The FastAPI server will be available at `http://127.0.0.1:8000`.  
-WebSocket endpoint will be ready at `ws://127.0.0.1:8000/ws/game`.
 
-### 3. Frontend Setup
-The frontend is a lightweight, dependency-free vanilla HTML5/Canvas client.
-You can either:
-- Open `client/index.html` directly in your browser, or
-- Serve it via Python's built-in HTTP server:
+Open **http://127.0.0.1:8000/** in your browser. The same backend serves the frontend and `/ws/game`; a separate static server on port 3000 does not provide the WebSocket backend. No frontend build is required.
+
+GLM is optional for a local run: without a key, PvE uses the existing legal-move fallback. To use GLM, copy `server/.env.example` to `server/.env`, edit it locally and restart the server. Never commit the real key.
+
+### 3. Docker and public deployment
+
+With Docker and Compose v2 installed:
+
 ```bash
-cd client
-python -m http.server 3000
+docker compose up --build --detach --wait --wait-timeout 120
 ```
-Then visit `http://localhost:3000` in two separate browser tabs to test multiplayer!
 
-### 4. Running Automated Tests
+Open **http://127.0.0.1:8000/**. The published port is loopback-only. See [the deployment guide](docs/DEPLOYMENT.md) for GLM configuration, Nginx HTTPS/WSS, systemd and rollback. Keep one application instance and one worker because matchmaking and rooms are in process memory. Deployment configuration does not establish that a public service is live.
+
+### 4. Tests and deployment checks
+
+With the virtual environment active, run from the repository root:
+
 ```bash
-# Run all unit tests and test suites
-pytest tests/ -v
+python -m pytest tests/ -q
+# Run after starting the service in another terminal:
+python deploy/check_public_url.py http://127.0.0.1:8000
 ```
+
+The checker verifies health, HTML/CSS/JS delivery and WebSocket connectivity without registering players or calling GLM. To check public HTTPS/WSS, pass the final HTTPS origin. Complete-game and manual accessibility checks remain separate acceptance steps.
 
 ---
 
@@ -152,7 +151,7 @@ pytest tests/ -v
 
 To keep development organized and aligned with our proposal milestones:
 
-1. **Check the Task Board**: Open [TASKS.md](file:///d:/Github%20Homepage/AILT9019_G31/TASKS.md).
+1. **Check the Task Board**: Open [TASKS.md](TASKS.md).
 2. **Claim a Task**: Pick an unassigned task (`@Unassigned`), add your name, and set the status to `[IN PROGRESS]`.
 3. **Branching Convention**:
    - `feat/wp1-canvas-renderer`
@@ -163,7 +162,7 @@ To keep development organized and aligned with our proposal milestones:
    ```bash
    pytest tests/
    ```
-5. **Mark Done**: Update [TASKS.md](file:///d:/Github%20Homepage/AILT9019_G31/TASKS.md) with `[x]` and `[DONE]`.
+5. **Mark Done**: Update [TASKS.md](TASKS.md) with `[x]` and `[DONE]`.
 
 ---
 
@@ -175,8 +174,8 @@ To keep development organized and aligned with our proposal milestones:
 | **Sun, Oct 11 (Week 6)** | Sprint 1 Review | Local 2-player PvP prototype working over WebSockets |
 | **Sun, Oct 18 (Week 7)** | Sprint 2 Review | Cloud VPS deployment + GLM AI integration |
 | **Sun, Oct 25 (Week 8)** | Sprint 3 Review | 100% pass on Test Suites A & B; 15-student user trials completed |
-| **Mon, Oct 26** | **Mid-Term Checkpoint** | Live public URL + walkthrough demo video + progress report |
+| **Mon, Oct 26** | **Mid-Term Checkpoint** | One ZIP (≤100 MB): MP4 ≤60 seconds, repository_link.txt, one-page status sheet; exact cutoff on Moodle |
 
 ---
 
-*For technical questions or protocol references, please consult [docs/TECHNICAL_SPEC.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/TECHNICAL_SPEC.md).*
+*For technical questions or protocol references, please consult [docs/TECHNICAL_SPEC.md](docs/TECHNICAL_SPEC.md).*

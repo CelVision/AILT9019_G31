@@ -10,6 +10,18 @@ Reviewed on 2026-10-23:
 
 ## Unreleased
 
+### Deployment implementation — 2026-10-23
+
+- Added a non-root Python 3.12 Docker image and Compose service with one worker, a loopback-bound port, health checks, a read-only filesystem, temporary storage and bounded logs. GLM settings are injected at runtime; environment files and Git history are excluded from the build context.
+- Added `deploy/check_public_url.py` to verify healthy JSON, all client assets and WebSocket upgrade/ping-pong. It validates HTTPS certificates, rejects redirects/non-origin URLs, returns a failure exit code and never joins matchmaking or calls GLM.
+- Added 16 regression cases for origin validation, HTTPS-to-WSS selection, resource failures, incorrect content types, unhealthy responses and WebSocket timeouts. Local suite: **42 passed, 3 existing deprecation warnings** on Python 3.12.14.
+- Independently started the current application locally and passed all eight HTTP/assets/WebSocket checks at `http://127.0.0.1:18765` with GLM disabled.
+- Added deployment CI for Python tests, Compose/systemd validation, Docker health/non-root checks, and Nginx HTTP-to-HTTPS redirection plus HTTPS/WSS using an ephemeral trusted-for-test certificate.
+- Updated the native systemd service to use journald and filesystem/process restrictions; a pre-created `/var/log/connectfour` directory is no longer required.
+- Added [deployment and rollback instructions](docs/DEPLOYMENT.md); corrected README to use the backend-served frontend, repaired repository documentation links and aligned the midterm recording description with the 60-second limit.
+- Adapted deployment-only ideas from historical `ca0b19e`. Its frontend accessibility changes remain reverted. The [earlier review](docs/MIDTERM_REPOSITORY_REVIEW.md) describes the original `3726563` baseline, not the deployment branch's new files.
+- A public VPS/domain/certificate and manual game/accessibility acceptance are still outstanding. CI verifies a test deployment and does not publish the application to a public server.
+
 ### Documentation and verification — 2026-10-23
 
 - Added this history and a [midterm repository review](docs/MIDTERM_REPOSITORY_REVIEW.md) with current limitations, deployment handoff priorities, and contribution wording.

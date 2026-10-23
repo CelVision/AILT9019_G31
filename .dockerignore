@@ -1,0 +1,14 @@
+# Allow only application inputs; exclude credentials, Git history and test data.
+**
+!server/
+!server/requirements.txt
+!server/app/
+!server/app/**
+!client/
+!client/**
+**/__pycache__/
+**/*.pyc
+**/.env
+**/.env.*
+**/*.key
+**/*.pem

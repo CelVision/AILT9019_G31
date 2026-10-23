@@ -1,0 +1,26 @@
+services:
+  game:
+    image: connectfour:${CONNECTFOUR_IMAGE_TAG:-local}
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      GLM_API_KEY: ${GLM_API_KEY:-}
+      GLM_BASE_URL: ${GLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
+      GLM_MODEL: ${GLM_MODEL:-glm-4.5-air}
+      GLM_ALLOWED_MODELS: ${GLM_ALLOWED_MODELS:-glm-4.5-air}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-3.5}
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

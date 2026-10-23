@@ -2,13 +2,15 @@
 
 Welcome to the team task tracker! This document is designed for all team members to view, claim, update, and add development tasks as we build toward the **Mid-Term Checkpoint (Monday, October 26)**.
 
-**Last updated:** 2026-10-22 · **Detailed worklog:** [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md)
+**Last updated:** 2026-10-23 · **Detailed worklog:** [docs/WORKLOG.md](docs/WORKLOG.md)
 
 ## 🗞️ Recent Updates
 
+- **2026-10-23 — Deployment implementation:** added Docker/Compose, an HTTP/WS endpoint checker with regression tests, deployment CI and [deployment instructions](docs/DEPLOYMENT.md). Native systemd now logs to journald. This is deployment preparation; WP4 public VPS/domain/certificate acceptance remains open. Historical UI accessibility changes remain reverted. See [CHANGELOG.md](CHANGELOG.md).
+
 - **2026-10-22** — Switched the temporary PvE model to **`glm-4.5-air`** with a **3.5s** timeout. **Live smoke passed:** `column=3`, **2883.0ms**. The target remains `glm-4.7-flash` once the GLM console grants access. README, env template, config, tests, and worklog were updated; **26 tests pass**.
 - **2026-10-22** — `GLM-4.7-FlashX` is enabled (`200`) but unusably slow: a trivial call took **28.4s**, and a real Connect Four prompt exceeded **35s**. Not viable for the turn target.
-- **2026-10-22** — Pre-push evaluation (before the model switch): **26 tests pass**, `server/.env` is ignored, and the live key is absent from tracked files. The old-model (`glm-4-flash`) smoke succeeded at **1737.9ms**; at that time the timeout was 2.5s and the provider entitlement issue blocked a successful in-game turn. See the [worklog](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md).
+- **2026-10-22** — Pre-push evaluation (before the model switch): **26 tests pass**, `server/.env` is ignored, and the live key is absent from tracked files. The old-model (`glm-4-flash`) smoke succeeded at **1737.9ms**; at that time the timeout was 2.5s and the provider entitlement issue blocked a successful in-game turn. See the [worklog](docs/WORKLOG.md).
 - **2026-10-21** — Completed **QW-1** (root static serving), **QW-2** (single-worker systemd + env file outside repo), **WP3-2** (GLM client, **live smoke passed**), and **WP3-5** (`config.py`, `.env.example`, `.gitignore` hardening). **WP3-3** (GLM turn handler + temporary safe move) is in review: live fallback worked on `429` and on a 2.5s timeout, but a successful in-game GLM turn is blocked by account rate limiting. Full suite is **26 passed**.
 
 ---
@@ -79,8 +81,8 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
 ## 🚀 Sprint 1: Week 6 — Core Foundation & Local MVP (Oct 5 – Oct 11)
 
 ### WP0: Proposal Finalization
-- [x] **[DONE]** `WP0-1`: Author revised proposal markdown with all 7 reviewer responses ([docs/proposal/](file:///d:/Github%20Homepage/AILT9019_G31/docs/proposal/AILT9019_Revised_Proposal_G31.md)) | **Assignee**: @Team | **Due**: 2026-10-07
-- [x] **[DONE]** `WP0-2`: Generate Project Plan ([docs/PROJECT_PLAN.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/PROJECT_PLAN.md)) and Technical Specification ([docs/TECHNICAL_SPEC.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/TECHNICAL_SPEC.md)) | **Assignee**: @Team | **Due**: 2026-10-07
+- [x] **[DONE]** `WP0-1`: Author revised proposal markdown with all 7 reviewer responses ([docs/proposal/](docs/proposal/AILT9019_Revised_Proposal_G31.md)) | **Assignee**: @Team | **Due**: 2026-10-07
+- [x] **[DONE]** `WP0-2`: Generate Project Plan ([docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)) and Technical Specification ([docs/TECHNICAL_SPEC.md](docs/TECHNICAL_SPEC.md)) | **Assignee**: @Team | **Due**: 2026-10-07
 - [ ] **[TODO]** `WP0-3`: Final proofread and submission of Revised Proposal PDF via Moodle form | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-10 (Sat)
   - Verify all student IDs, group info, and word counts comply with template.
 
@@ -210,7 +212,7 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
 ## 🎯 Mid-Term Checkpoint Deliverables (Monday, October 26)
 
 - [ ] **[TODO]** `DELIV-1`: Verify public HTTPS VPS URL is live and stable | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-25
-- [ ] **[TODO]** `DELIV-2`: Record and edit 3–5 minute prototype walkthrough video | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-25
+- [ ] **[TODO]** `DELIV-2`: Record an MP4 showing a real input → processing → output in 60 seconds or less | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-25
   - Demonstrate: guest entry, age filtering, live PvP game, 15s queue timeout $\rightarrow$ PvE AI fallback, canned reactions, fault injection recovery.
 - [ ] **[TODO]** `DELIV-3`: Compile Test Suite execution logs (Suites A & B) & Cohort Survey results | **Assignee**: @Team | **Priority**: High | **Due**: 2026-10-26
 - [ ] **[TODO]** `DELIV-4`: Package Mid-Term Checkpoint submission report & submit via Moodle | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-26
