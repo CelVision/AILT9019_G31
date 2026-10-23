@@ -2,13 +2,15 @@
 
 Welcome to the team task tracker! This document is designed for all team members to view, claim, update, and add development tasks as we build toward the **Mid-Term Checkpoint (Monday, October 26)**.
 
-**Last updated:** 2026-10-22 · **Detailed worklog:** [docs/WORKLOG.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md)
+**Last updated:** 2026-10-23 · **Detailed worklog:** [docs/WORKLOG.md](docs/WORKLOG.md)
 
 ## 🗞️ Recent Updates
 
+- **2026-10-23 — XIANG HANCHENG deployment contribution:** added container configuration and an endpoint checker under `deploy/`, checker tests under `tests/`, and [changelog](docs/CHANGELOG.md). Setup instructions are in README. VPS/domain/certificate acceptance remains open; configuration preparation is not a completed public deployment.
+
 - **2026-10-22** — Switched the temporary PvE model to **`glm-4.5-air`** with a **3.5s** timeout. **Live smoke passed:** `column=3`, **2883.0ms**. The target remains `glm-4.7-flash` once the GLM console grants access. README, env template, config, tests, and worklog were updated; **26 tests pass**.
 - **2026-10-22** — `GLM-4.7-FlashX` is enabled (`200`) but unusably slow: a trivial call took **28.4s**, and a real Connect Four prompt exceeded **35s**. Not viable for the turn target.
-- **2026-10-22** — Pre-push evaluation (before the model switch): **26 tests pass**, `server/.env` is ignored, and the live key is absent from tracked files. The old-model (`glm-4-flash`) smoke succeeded at **1737.9ms**; at that time the timeout was 2.5s and the provider entitlement issue blocked a successful in-game turn. See the [worklog](file:///d:/Github%20Homepage/AILT9019_G31/docs/WORKLOG.md).
+- **2026-10-22** — Pre-push evaluation (before the model switch): **26 tests pass**, `server/.env` is ignored, and the live key is absent from tracked files. The old-model (`glm-4-flash`) smoke succeeded at **1737.9ms**; at that time the timeout was 2.5s and the provider entitlement issue blocked a successful in-game turn. See the [worklog](docs/WORKLOG.md).
 - **2026-10-21** — Completed **QW-1** (root static serving), **QW-2** (single-worker systemd + env file outside repo), **WP3-2** (GLM client, **live smoke passed**), and **WP3-5** (`config.py`, `.env.example`, `.gitignore` hardening). **WP3-3** (GLM turn handler + temporary safe move) is in review: live fallback worked on `429` and on a 2.5s timeout, but a successful in-game GLM turn is blocked by account rate limiting. Full suite is **26 passed**.
 
 ---
@@ -79,8 +81,8 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
 ## 🚀 Sprint 1: Week 6 — Core Foundation & Local MVP (Oct 5 – Oct 11)
 
 ### WP0: Proposal Finalization
-- [x] **[DONE]** `WP0-1`: Author revised proposal markdown with all 7 reviewer responses ([docs/proposal/](file:///d:/Github%20Homepage/AILT9019_G31/docs/proposal/AILT9019_Revised_Proposal_G31.md)) | **Assignee**: @Team | **Due**: 2026-10-07
-- [x] **[DONE]** `WP0-2`: Generate Project Plan ([docs/PROJECT_PLAN.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/PROJECT_PLAN.md)) and Technical Specification ([docs/TECHNICAL_SPEC.md](file:///d:/Github%20Homepage/AILT9019_G31/docs/TECHNICAL_SPEC.md)) | **Assignee**: @Team | **Due**: 2026-10-07
+- [x] **[DONE]** `WP0-1`: Author revised proposal markdown with all 7 reviewer responses ([docs/proposal/](docs/proposal/AILT9019_Revised_Proposal_G31.md)) | **Assignee**: @Team | **Due**: 2026-10-07
+- [x] **[DONE]** `WP0-2`: Generate Project Plan ([docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)) and Technical Specification ([docs/TECHNICAL_SPEC.md](docs/TECHNICAL_SPEC.md)) | **Assignee**: @Team | **Due**: 2026-10-07
 - [ ] **[TODO]** `WP0-3`: Final proofread and submission of Revised Proposal PDF via Moodle form | **Assignee**: @Team | **Priority**: Critical | **Due**: 2026-10-10 (Sat)
   - Verify all student IDs, group info, and word counts comply with template.
 
@@ -169,11 +171,11 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
   - Python 3.12+, Uvicorn, Nginx, Git, Certbot.
 - [ ] **[TODO]** `WP4-2`: Configure Nginx reverse proxy with SSL & WebSocket upgrades | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-14
   - Enable Let's Encrypt SSL (HTTPS and WSS).
-  - Proxy `ws://127.0.0.1:8000/ws` to `wss://<domain>/ws`.
+  - Proxy `ws://127.0.0.1:8000/ws/game` to `wss://<domain>/ws/game`.
   - **Status note:** `deploy/nginx.conf` is ready; remaining work is applying it on the VPS and issuing the certificate.
 - [ ] **[TODO]** `WP4-3`: Configure Systemd daemon (`deploy/connectfour.service`) | **Assignee**: @Unassigned | **Priority**: Medium | **Due**: 2026-10-15
-  - Enable auto-restart on failure, log rotation in `/var/log/connectfour`.
-  - **Status note:** the unit file exists; apply QW-2 (`--workers 1`, env file path) before enabling it.
+  - Enable auto-restart and inspect service logs with `journalctl -u connectfour`.
+  - **Status note:** the unit includes single-worker operation, an external environment file, journald logging and service restrictions; installation and restart verification on the VPS remain pending.
 - [ ] **[TODO]** `WP4-4`: Verify zero-configuration public URL access | **Assignee**: @Unassigned | **Priority**: Critical | **Due**: 2026-10-16
   - Test game loads on mobile Safari, Android Chrome, and desktop browsers without login/keys.
 
