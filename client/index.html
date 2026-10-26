@@ -33,121 +33,127 @@
 
     <!-- Active Match Dashboard -->
     <section id="matchSection" class="match-section hidden">
-      <!-- Players Bar -->
-      <div class="players-bar">
-        <!-- Player 1 (You) -->
-        <div id="player1Card" class="player-card active-turn">
-          <div class="avatar avatar-p1">🔴</div>
-          <div class="player-info">
-            <span id="player1Name" class="player-name">You</span>
-            <span id="player1Role" class="player-meta">Player 1</span>
-          </div>
-          <div id="p1SpeechBubble" class="speech-bubble hidden"></div>
-        </div>
+      <div class="game-layout">
+        <!-- Main Game Board Column -->
+        <div class="game-main-area">
+          <!-- Players Bar -->
+          <div class="players-bar">
+            <!-- Player 1 (You) -->
+            <div id="player1Card" class="player-card active-turn">
+              <div class="avatar avatar-p1">🔴</div>
+              <div class="player-info">
+                <span id="player1Name" class="player-name">You</span>
+                <span id="player1Role" class="player-meta">Player 1</span>
+              </div>
+              <div id="p1SpeechBubble" class="speech-bubble hidden"></div>
+            </div>
 
-        <!-- Center Match Info & Turn Timer -->
-        <div class="match-info">
-          <div id="turnIndicator" class="turn-indicator">Your Turn</div>
-          <div class="timer-container">
-            <div id="timerBar" class="timer-bar" style="width: 100%;"></div>
-          </div>
-          <span id="timerText" class="timer-text">30s</span>
-        </div>
+            <!-- Center Match Info & Turn Timer -->
+            <div class="match-info">
+              <div id="turnIndicator" class="turn-indicator">Your Turn</div>
+              <div class="timer-container">
+                <div id="timerBar" class="timer-bar" style="width: 100%;"></div>
+              </div>
+              <span id="timerText" class="timer-text">30s</span>
+            </div>
 
-        <!-- Player 2 (Opponent / Bot) -->
-        <div id="player2Card" class="player-card">
-          <div class="avatar avatar-p2">🟡</div>
-          <div class="player-info">
-            <span id="player2Name" class="player-name">Opponent</span>
-            <span id="player2Role" class="player-meta">Waiting...</span>
-          </div>
-          <div id="p2SpeechBubble" class="speech-bubble hidden"></div>
-        </div>
-      </div>
-
-      <!-- Connect Four Board -->
-      <div class="board-wrapper">
-        <canvas id="gameCanvas" width="640" height="550"></canvas>
-      </div>
-
-      <!-- In-Game Canned Interaction Tray -->
-      <div class="interaction-tray">
-        <div class="tray-section">
-          <span class="tray-label">Preset Phrases:</span>
-          <div class="phrases-grid">
-            <button class="phrase-btn" data-id="1">Good luck!</button>
-            <button class="phrase-btn" data-id="2">Nice move!</button>
-            <button class="phrase-btn" data-id="3">Thinking...</button>
-            <button class="phrase-btn" data-id="4">Close one!</button>
-            <button class="phrase-btn" data-id="5">Well played!</button>
-            <button class="phrase-btn" data-id="6">Good game!</button>
-          </div>
-        </div>
-        <div class="tray-section">
-          <span class="tray-label">Reactions:</span>
-          <div class="stickers-row">
-            <button class="sticker-btn" data-id="1" title="Thumbs Up">👍</button>
-            <button class="sticker-btn" data-id="2" title="Applause">👏</button>
-            <button class="sticker-btn" data-id="3" title="Thinking">🤔</button>
-            <button class="sticker-btn" data-id="4" title="Celebration">🎉</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- In-Game Chat & Daily Icebreakers Bar -->
-      <div class="chat-container">
-        <!-- Daily Topics Icebreaker Row -->
-        <div class="icebreaker-section">
-          <div class="icebreaker-header">
-            <span class="tray-label">☕ Daily Campus Icebreakers</span>
-            <span class="icebreaker-sub">Tap any topic card to chat</span>
-          </div>
-          <div id="topicPillsRow" class="topic-pills-row">
-            <button type="button" class="topic-pill-btn" data-id="1">☕ Coffee or Tea?</button>
-            <button type="button" class="topic-pill-btn" data-id="2">📚 Midterm Prep</button>
-            <button type="button" class="topic-pill-btn" data-id="3">🍕 Campus Food</button>
-            <button type="button" class="topic-pill-btn" data-id="4">🎧 Study Music</button>
-          </div>
-        </div>
-
-        <!-- Chat Box -->
-        <div class="chat-box">
-          <div class="chat-header">
-            <div class="chat-header-title">
-              <span class="chat-icon">💬</span>
-              <span id="chatTitle">Match Chat</span>
-              <span id="chatBadge" class="chat-badge pve">AI Companion</span>
+            <!-- Player 2 (Opponent / Bot) -->
+            <div id="player2Card" class="player-card">
+              <div class="avatar avatar-p2">🟡</div>
+              <div class="player-info">
+                <span id="player2Name" class="player-name">Opponent</span>
+                <span id="player2Role" class="player-meta">Waiting...</span>
+              </div>
+              <div id="p2SpeechBubble" class="speech-bubble hidden"></div>
             </div>
           </div>
 
-          <div id="chatMessageList" class="chat-message-list">
-            <div class="chat-empty-hint">Tap a daily topic or say hello to start chatting!</div>
+          <!-- Connect Four Board -->
+          <div class="board-wrapper">
+            <canvas id="gameCanvas" width="640" height="550"></canvas>
           </div>
 
-          <div id="chatTypingIndicator" class="chat-typing-indicator hidden">
-            <span class="typing-dot"></span>
-            <span class="typing-dot"></span>
-            <span class="typing-dot"></span>
-            <span class="typing-text">AI Coach is thinking…</span>
-          </div>
-
-          <!-- Chat Input Row -->
-          <form id="chatForm" class="chat-input-row">
-            <input
-              type="text"
-              id="chatInput"
-              class="chat-input"
-              placeholder="Chat with AI Coach (e.g. coffee, midterm, study tips)..."
-              maxlength="140"
-              autocomplete="off"
-            >
-            <button type="submit" id="btnSendChat" class="btn btn-chat-send">Send</button>
-          </form>
-
-          <div id="chatSafetyNotice" class="chat-safety-notice hidden">
-            <span>🔒 <strong>Safe PvP Mode</strong>: Tap a Daily Icebreaker topic above to share pre-approved collegiate topics without stranger DMs.</span>
+          <!-- In-Game Canned Interaction Tray -->
+          <div class="interaction-tray">
+            <div class="tray-section">
+              <span class="tray-label">Preset Phrases:</span>
+              <div class="phrases-grid">
+                <button class="phrase-btn" data-id="1">Good luck!</button>
+                <button class="phrase-btn" data-id="2">Nice move!</button>
+                <button class="phrase-btn" data-id="3">Thinking...</button>
+                <button class="phrase-btn" data-id="4">Close one!</button>
+                <button class="phrase-btn" data-id="5">Well played!</button>
+                <button class="phrase-btn" data-id="6">Good game!</button>
+              </div>
+            </div>
+            <div class="tray-section">
+              <span class="tray-label">Reactions:</span>
+              <div class="stickers-row">
+                <button class="sticker-btn" data-id="1" title="Thumbs Up">👍</button>
+                <button class="sticker-btn" data-id="2" title="Applause">👏</button>
+                <button class="sticker-btn" data-id="3" title="Thinking">🤔</button>
+                <button class="sticker-btn" data-id="4" title="Celebration">🎉</button>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- Right Column: Match Sidebar -->
+        <aside class="game-sidebar">
+          <div class="sidebar-header">
+            <div class="sidebar-title-row">
+              <span class="sidebar-icon">💬</span>
+              <span class="sidebar-title">Match Hub</span>
+              <span id="chatBadge" class="chat-badge pve">AI Companion</span>
+            </div>
+            <span class="sidebar-subtitle">Daily Icebreakers & Peer Banter</span>
+          </div>
+
+          <!-- Daily Topics Icebreaker Row in Sidebar -->
+          <div class="icebreaker-section">
+            <div class="icebreaker-header">
+              <span class="tray-label">☕ Campus Icebreakers</span>
+              <span class="icebreaker-sub">1-Tap Prompts</span>
+            </div>
+            <div id="topicPillsRow" class="topic-pills-row">
+              <button type="button" class="topic-pill-btn" data-id="1">☕ Coffee or Tea?</button>
+              <button type="button" class="topic-pill-btn" data-id="2">📚 Midterm Prep</button>
+              <button type="button" class="topic-pill-btn" data-id="3">🍕 Campus Food</button>
+              <button type="button" class="topic-pill-btn" data-id="4">🎧 Study Music</button>
+            </div>
+          </div>
+
+          <!-- Chat Box in Sidebar -->
+          <div class="chat-box">
+            <div id="chatMessageList" class="chat-message-list">
+              <div class="chat-empty-hint">Tap a daily topic or say hello to start chatting!</div>
+            </div>
+
+            <div id="chatTypingIndicator" class="chat-typing-indicator hidden">
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-text">AI Coach is thinking…</span>
+            </div>
+
+            <!-- Chat Input Row -->
+            <form id="chatForm" class="chat-input-row">
+              <input
+                type="text"
+                id="chatInput"
+                class="chat-input"
+                placeholder="Chat with AI Coach..."
+                maxlength="140"
+                autocomplete="off"
+              >
+              <button type="submit" id="btnSendChat" class="btn btn-chat-send">Send</button>
+            </form>
+
+            <div id="chatSafetyNotice" class="chat-safety-notice hidden">
+              <span>🔒 <strong>Safe PvP Mode</strong>: Tap a Campus Icebreaker above to share pre-approved topics safely.</span>
+            </div>
+          </div>
+        </aside>
       </div>
     </section>
 

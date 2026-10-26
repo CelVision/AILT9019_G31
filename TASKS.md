@@ -233,8 +233,8 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
   - Ephemeral conversational context for PvE room (sliding 6 message memory per match).
   - Friendly collegiate peer system prompt with strict refusal of PII/harmful queries.
   - Asynchronous background response generation with Bailian Qwen3.6-Flash integration.
-- [x] **[DONE]** `WP1-9`: In-Game Chat Bar & Daily Topic Cards (`client/index.html`, `client/css/style.css`, `client/js/app.js`) | **Assignee**: @David | **Completed**: 2026-10-26
-  - Sleek glassmorphic chatting bar beside/below the Connect Four board with typing indicator.
+- [x] **[DONE]** `WP1-9`: In-Game Match Hub Sidebar & Daily Topic Cards (`client/index.html`, `client/css/style.css`, `client/js/app.js`) | **Assignee**: @David | **Completed**: 2026-10-26
+  - Sleek dual-column sidebar layout alongside the board with sticky Match Hub, Daily Icebreakers, and typing indicator.
   - Interactive input field (active in PvE mode) with send button and character counter (max 140 chars).
   - Quick-tap "Daily Icebreaker Cards" (active in both PvP and PvE) with 4 collegiate conversation starters.
   - Dynamic speech bubble rendering for player, opponent, and AI Coach.
