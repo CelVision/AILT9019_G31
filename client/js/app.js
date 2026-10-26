@@ -88,12 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTurn = 1;
     totalTurns = 0;
     matchStartTime = Date.now();
+    boardRenderer.reset();
 
     // Setup player labels
     player1Name.textContent = myPlayerNum === 1 ? 'You (Red)' : `${payload.opponent_nickname} (Red)`;
     player1Role.textContent = myPlayerNum === 1 ? 'Host' : 'Opponent';
     player2Name.textContent = myPlayerNum === 2 ? 'You (Yellow)' : `${payload.opponent_nickname} (Yellow)`;
-    player2Role.textContent = payload.is_pve ? 'AI Bot (Gemini)' : 'Peer';
+    player2Role.textContent = payload.is_pve ? 'AI Bot (GLM)' : 'Peer';
 
     updateTurnState(1);
     startTurnTimer(payload.turn_duration_seconds || 30);
@@ -127,6 +128,33 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(payload.message || 'AI opponent operating in local fallback mode.');
   });
 
+  socketClient.on('queue_status', (payload) => {
+    const timeout = payload.timeout_seconds || 15;
+    const elapsed = Math.min(timeout, payload.elapsed_seconds || 0);
+    queueProgress.style.width = `${(elapsed / timeout) * 100}%`;
+    const remaining = Math.max(0, timeout - elapsed);
+    queueTimerText.textContent = `${remaining}s remaining before AI opponent joins`;
+  });
+
+  socketClient.on('rematch_waiting', (payload) => {
+    showToast(payload.message || 'Waiting for your opponent to accept the rematch.');
+  });
+
+  socketClient.on('error', (payload) => {
+    const message = payload && payload.message
+      ? payload.message
+      : 'The server rejected that request.';
+    if (!queueModal.classList.contains('hidden')) {
+      clearInterval(queueInterval);
+      queueModal.classList.add('hidden');
+      onboardingModal.classList.remove('hidden');
+      formError.textContent = message;
+      formError.classList.remove('hidden');
+    } else {
+      showToast(message);
+    }
+  });
+
   // Registration Form Submit
   registrationForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -137,8 +165,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentYear = new Date().getFullYear();
     const age = currentYear - birthYear;
 
-    if (age < 18) {
-      formError.textContent = 'Users must be 18+ to enter.';
+    if (nickname.length < 2 || nickname.length > 16) {
+      formError.textContent = 'Nickname must be 2–16 characters.';
+      formError.classList.remove('hidden');
+      return;
+    }
+
+    if (!Number.isInteger(birthYear) || age < 18 || birthYear < 1920) {
+      formError.textContent = 'Birth year must be valid and the player must be 18+.';
       formError.classList.remove('hidden');
       return;
     }

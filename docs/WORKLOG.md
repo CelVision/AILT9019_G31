@@ -2,6 +2,14 @@
 
 **Purpose:** running handoff log for the team. Record decisions, completed work, verification results, and anything the next person needs to know. Newest entries first. **Never paste API keys, tokens, or real `.env` contents here.**
 
+## 2026-10-26 — Protocol hardening and local acceptance fixes
+
+- Added server-side registration validation with explicit `error` frames for invalid nicknames, ages, message payloads, columns, and reactions.
+- Added authoritative `queue_status` frames, server-enforced 30-second turn expiry, and short-lived finished-room records for PvP/PvE rematches.
+- Reconnected the deterministic depth-4 Minimax bot as the GLM failure fallback; the safe center-out selector remains only as a defensive last resort.
+- Updated the browser for server queue status, validation errors, GLM naming, rematch waiting, board reset, and pointer input on touch devices.
+- Added the 20-case age/profile Suite A and 10-case GLM fault Suite B. Verification: `75 passed`; local endpoint checker passed; live WebSocket verification passed for validation, queue status, PvP completion/rematch, and PvE Minimax fallback.
+
 ---
 
 ## 2026-10-23 — XIANG HANCHENG deployment implementation

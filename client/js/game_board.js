@@ -32,9 +32,12 @@ class GameBoardRenderer {
   }
 
   bindEvents() {
-    this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-    this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
-    this.canvas.addEventListener('click', (e) => this.handleClick(e));
+    // Pointer events cover mouse, touch, and pen input without generating a
+    // second click after a touch release.
+    this.canvas.style.touchAction = 'none';
+    this.canvas.addEventListener('pointermove', (e) => this.handleMouseMove(e));
+    this.canvas.addEventListener('pointerleave', () => this.handleMouseLeave());
+    this.canvas.addEventListener('pointerup', (e) => this.handleClick(e));
   }
 
   handleMouseMove(e) {
@@ -89,6 +92,13 @@ class GameBoardRenderer {
 
   setWinningCoords(coords) {
     this.winningCoords = coords;
+    this.render();
+  }
+
+  reset() {
+    this.board = Array(this.rows).fill(0).map(() => Array(this.cols).fill(0));
+    this.winningCoords = null;
+    this.hoverCol = -1;
     this.render();
   }
 

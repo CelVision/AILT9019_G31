@@ -21,10 +21,10 @@ Contemporary digital social platforms rely almost exclusively on appearance-driv
 2. **Safe Canned Communication**: Free-form text input is completely omitted by design. Players interact exclusively using a sportsmanship palette of **6 preset phrases** and **4 reaction stickers** with animated speech bubbles.
 3. **Age-Gated In-Memory Matchmaking**: Players complete lightweight guest registration (Nickname + Birth Year). The backend enforces $\text{Age} \ge 18$ and pairs users with peers within an acceptable age difference ($|\Delta\text{Age}| \le 3$).
 4. **Guaranteed Zero-Wait Availability (AI Fallback)**: If a human peer is not found within the 15-second matchmaking queue, the server automatically routes the player into a PvE room with an intelligent **GLM-4.5-Air** opponent (temporary; **GLM-4.7-Flash** is the target once account access is enabled).
-5. **Fail-Safe Fallback**: If the upstream LLM returns a rate-limit/error response or exceeds the **3.5s** move deadline, the server immediately plays a safe center-out legal move so the room never stalls; the deterministic Minimax bot is retained and will be re-wired in WP3-7.
+5. **Fail-Safe Fallback**: If the upstream LLM returns a rate-limit/error response or exceeds the **3.5s** move deadline, the server immediately switches to the local deterministic Minimax bot so the room never stalls.
 6. **Zero Persistent PII**: All user sessions and room memory exist strictly in RAM and are immediately purged upon socket disconnection.
 
-> **⚠️ Current sprint note (2026-10-22):** PvE temporarily uses **GLM-4.5-Air** because this account cannot yet access `glm-4.7-flash` or `glm-4.5-flash`. The live Connect Four prompt measured **~2.3–2.9s**, so the local deadline is **3.5s**. **GLM-4.7-Flash** remains the target once it is enabled in the GLM console. Gemini integration is deferred. The Minimax fallback is temporarily unwired; if GLM is unavailable, the server plays a safe center-out move so the room never stalls. See [docs/WORKLOG.md](docs/WORKLOG.md) for the current architecture and handoff notes.
+> **⚠️ Current sprint note (2026-10-26):** PvE uses **GLM-4.5-Air** because this account cannot yet access `glm-4.7-flash` or `glm-4.5-flash`. The live Connect Four prompt measured **~2.3–2.9s**, so the local deadline is **3.5s**. **GLM-4.7-Flash** remains the target once it is enabled in the GLM console. Gemini integration is deferred. GLM failures fall back to the local deterministic Minimax bot. See [docs/WORKLOG.md](docs/WORKLOG.md) for the current architecture and handoff notes.
 
 ---
 
@@ -123,7 +123,7 @@ python -m uvicorn app.main:app --app-dir server --host 127.0.0.1 --port 8000 --w
 
 Open **http://127.0.0.1:8000/**. The same service provides the frontend, `/api/health` and `/ws/game`; no frontend build or separate static server is needed. A static server on port 3000 cannot provide the client's same-origin WebSocket backend.
 
-GLM is optional for a local run: without a key, the existing PvE handler uses a local legal-move fallback. For GLM, copy `server/.env.example` to `server/.env`, edit it locally and restart. Never commit a real key.
+GLM is optional for a local run: without a key, the PvE handler uses the local Minimax fallback. For GLM, copy `server/.env.example` to `server/.env`, edit it locally and restart. Never commit a real key.
 
 ### 3. Deployment from the deploy directory
 
