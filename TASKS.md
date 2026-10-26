@@ -5,7 +5,7 @@ Welcome to the team task tracker! This document is designed for all team members
 **Last updated:** 2026-10-26 · **Detailed worklog:** [docs/WORKLOG.md](docs/WORKLOG.md)
 
 ## 🗞️ Recent Updates
-
+- **2026-10-26 — QW-3 touchscreen input:** Implemented touch/pen pointer selection in `client/js/game_board.js`, preserved desktop hover preview, and added `tests/test_game_board_pointer.js`. Automated regression test passes; physical iOS/Android verification is still pending. QW-3 remains in REVIEW.
 - **2026-10-26** — Reviewed merged deployment PR #2 (`c29d8e7`). **42 tests pass**; the local endpoint checker passed all 8 HTTP/asset/WS checks; Docker build and VPS/DNS/TLS/public-URL acceptance remain unverified. Formal `TECHNICAL_SPEC.md`/`PROJECT_PLAN.md` still say Gemini 1.5 Flash and 1.5s; update them to GLM-4.5-Air/3.5s before the checkpoint report.
 - **2026-10-23 — XIANG HANCHENG deployment contribution:** added container configuration and an endpoint checker under `deploy/`, checker tests under `tests/`, and [changelog](docs/CHANGELOG.md). Setup instructions are in README. VPS/domain/certificate acceptance remains open; configuration preparation is not a completed public deployment.
 - **2026-10-22** — Switched the temporary PvE model to **`glm-4.5-air`** with a **3.5s** timeout. **Live smoke passed:** `column=3`, **2883.0ms**. The target remains `glm-4.7-flash` once the GLM console grants access. README, env template, config, tests, and worklog were updated; **26 tests pass**.
@@ -67,7 +67,7 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
 | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
 | **QW-1** | Fix static assets served from `/` | ✅ DONE (10-21) | 15 min | Critical | `server/app/main.py` | `http://127.0.0.1:8000/` loads CSS/JS with HTTP 200; `/ws/game` still works |
 | **QW-2** | Set `--workers 1` and move the env file outside the repo | ✅ DONE (10-21) | 10 min | Critical | `deploy/connectfour.service` | Service starts with `/etc/connectfour/connectfour.env`; rooms/queue stay consistent |
-| **QW-3** | Add touch/pointer column selection | ⬜ TODO | 30 min | High | `client/js/game_board.js` | Tapping a column drops a token on iOS/Android; desktop hover unchanged |
+| **QW-3** | Add touch/pointer column selection | ⬜ REVIEW | 30 min | High | `client/js/game_board.js` | Touching a column drops a token; desktop hover preview remains functional. Automated regression test passes; physical iOS Safari and Android Chrome verification is still pending. |
 | **QW-4** | Validate `queue_join` server-side and return an `error` frame | ✅ DONE (10-26) | 45 min | High | `server/app/main.py`, `server/app/matchmaking.py`, `client/js/app.js` | Underage, malformed birth year, and nickname length 2–16 get a clear inline error; no silent drop |
 | **QW-5** | Emit `queue_status` every second | ✅ DONE (10-26) | 30 min | Medium | `server/app/main.py`, `client/js/app.js` | UI countdown matches server `elapsed_seconds` / `timeout_seconds` |
 | **QW-6** | Highlight the last dropped token | ⬜ TODO | 30 min | Low | `client/js/game_board.js`, `client/js/app.js` | Last token pulses; highlight clears on the next move |
