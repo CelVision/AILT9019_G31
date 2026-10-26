@@ -243,6 +243,9 @@ body {
   height: auto;
   cursor: pointer;
   border-radius: 1rem;
+  /* Make taps responsive without waiting for legacy double-tap handling. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* In-Game Interaction Tray */
