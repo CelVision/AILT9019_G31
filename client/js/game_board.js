@@ -34,6 +34,7 @@ class GameBoardRenderer {
   bindEvents() {
     // Pointer events cover mouse, touch, and pen with one input path.
     // Keep pointer movement for the existing desktop hover preview.
+    if (this.canvas.style) this.canvas.style.touchAction = 'none';
     this.canvas.addEventListener('pointermove', (e) => {
       if (e.pointerType === 'mouse') this.handleMouseMove(e);
     });
@@ -111,6 +112,13 @@ class GameBoardRenderer {
 
   setWinningCoords(coords) {
     this.winningCoords = coords;
+    this.render();
+  }
+
+  reset() {
+    this.board = Array(this.rows).fill(0).map(() => Array(this.cols).fill(0));
+    this.winningCoords = null;
+    this.hoverCol = -1;
     this.render();
   }
 
