@@ -13,14 +13,28 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_ai_settings
 from app.game_engine import ConnectFourEngine
+from app.matchmaking import MatchmakingQueue, QueueEntry, QueueRejected
 from app.ai.glm_client import GLMError, request_glm_move, safe_legal_column
+from app.ai.minimax_fallback import get_minimax_move
 
 
 app = FastAPI(title="ConnectFour Connect")
 
-# In-memory Matching Queue
-# Queue entry: {"ws": WebSocket, "session_id": str, "nickname": str, "birth_year": int, "age": int, "queued_at": float}
-matching_pool: List[Dict] = []
+# In-memory Matching Queue (pairing rules live in app/matchmaking.py).
+matchmaking = MatchmakingQueue()
+
+# How often a waiting player receives a queue_status heartbeat.
+QUEUE_HEARTBEAT_SECONDS = 1.0
+
+BOT_NICKNAME = "AI Coach"
+
+# Local reply must land well inside a human turn; Minimax depth 4 measures ~24 ms.
+FALLBACK_BUDGET_SECONDS = 0.25
+
+
+def current_year() -> int:
+    """Server-side clock used for the age check; tests override this."""
+    return time.localtime().tm_year
 
 # Active Game Rooms
 # room_id -> Room Data
@@ -55,7 +69,7 @@ async def health_check():
     return {
         "status": "healthy",
         "active_rooms": len(active_rooms),
-        "queued_users": len(matching_pool),
+        "queued_users": len(matchmaking),
         # Never return the key. These two fields are safe for operators.
         "llm_enabled": ai.enabled,
         "llm_model": ai.default_model,
@@ -64,104 +78,88 @@ async def health_check():
 
 # Matchmaking Background Task
 async def matchmaking_worker():
+    """Pair compatible players and expire stale queue entries every 500 ms."""
     while True:
         try:
-            now = time.time()
-            matched_indices = set()
-
-            # 1. Check for compatible human pairs (|ΔAge| <= 3)
-            for i in range(len(matching_pool)):
-                if i in matched_indices:
-                    continue
-                user_a = matching_pool[i]
-
-                for j in range(i + 1, len(matching_pool)):
-                    if j in matched_indices:
-                        continue
-                    user_b = matching_pool[j]
-
-                    if abs(user_a["age"] - user_b["age"]) <= 3:
-                        # Found compatible human pair!
-                        matched_indices.add(i)
-                        matched_indices.add(j)
-                        asyncio.create_task(create_pvp_match(user_a, user_b))
-                        break
-
-            # 2. Check for 15s queue timeouts -> Route to PvE
-            for k in range(len(matching_pool)):
-                if k in matched_indices:
-                    continue
-                user = matching_pool[k]
-                if now - user["queued_at"] >= 15.0:
-                    matched_indices.add(k)
-                    asyncio.create_task(create_pve_match(user))
-
-            # Remove matched or timed-out users from pool
-            if matched_indices:
-                remaining = [
-                    matching_pool[idx]
-                    for idx in range(len(matching_pool))
-                    if idx not in matched_indices
-                ]
-                matching_pool.clear()
-                matching_pool.extend(remaining)
-
+            pairs, expired = matchmaking.tick()
+            for user_a, user_b in pairs:
+                asyncio.create_task(create_pvp_match(user_a, user_b))
+            for user in expired:
+                asyncio.create_task(create_pve_match(user))
         except Exception as e:
             print("Matchmaking error:", e)
 
         await asyncio.sleep(0.5)
 
 
+async def queue_heartbeat():
+    """Push queue_status to every waiting player so the countdown is server-owned."""
+    while True:
+        await asyncio.sleep(QUEUE_HEARTBEAT_SECONDS)
+        try:
+            for entry in matchmaking.entries():
+                status = matchmaking.status(entry.session_id)
+                if status is not None:
+                    await manager.send_json(entry.ws, "queue_status", status)
+        except Exception as e:
+            print("Queue heartbeat error:", e)
+
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(matchmaking_worker())
+    asyncio.create_task(queue_heartbeat())
 
 
-async def create_pvp_match(user_a: dict, user_b: dict):
+async def create_pvp_match(user_a: QueueEntry, user_b: QueueEntry):
     room_id = f"rm_{uuid.uuid4().hex[:8]}"
     engine = ConnectFourEngine()
+
+    p1 = user_a.as_player()
+    p2 = user_b.as_player()
 
     room = {
         "room_id": room_id,
         "is_pve": False,
         "engine": engine,
-        "p1": user_a,
-        "p2": user_b,
+        "p1": p1,
+        "p2": p2,
         "current_turn": 1,
         "turn_start": time.time()
     }
     active_rooms[room_id] = room
 
     # Notify Player 1
-    await manager.send_json(user_a["ws"], "match_found", {
+    await manager.send_json(p1["ws"], "match_found", {
         "room_id": room_id,
         "is_pve": False,
         "assigned_player": 1,
-        "opponent_nickname": user_b["nickname"],
-        "opponent_age": user_b["age"],
+        "opponent_nickname": p2["nickname"],
+        "opponent_age": p2["age"],
         "turn_duration_seconds": 30
     })
 
     # Notify Player 2
-    await manager.send_json(user_b["ws"], "match_found", {
+    await manager.send_json(p2["ws"], "match_found", {
         "room_id": room_id,
         "is_pve": False,
         "assigned_player": 2,
-        "opponent_nickname": user_a["nickname"],
-        "opponent_age": user_a["age"],
+        "opponent_nickname": p1["nickname"],
+        "opponent_age": p1["age"],
         "turn_duration_seconds": 30
     })
 
 
-async def create_pve_match(user: dict):
+async def create_pve_match(user: QueueEntry):
     room_id = f"rm_{uuid.uuid4().hex[:8]}"
     engine = ConnectFourEngine()
 
+    human = user.as_player()
     bot_user = {
         "ws": None,
         "session_id": "bot",
-        "nickname": "Gemini Bot",
-        "age": user["age"],
+        "nickname": BOT_NICKNAME,
+        "age": human["age"],
         "is_bot": True
     }
 
@@ -169,19 +167,19 @@ async def create_pve_match(user: dict):
         "room_id": room_id,
         "is_pve": True,
         "engine": engine,
-        "p1": user,
+        "p1": human,
         "p2": bot_user,
         "current_turn": 1,
         "turn_start": time.time()
     }
     active_rooms[room_id] = room
 
-    await manager.send_json(user["ws"], "match_found", {
+    await manager.send_json(human["ws"], "match_found", {
         "room_id": room_id,
         "is_pve": True,
         "assigned_player": 1,
-        "opponent_nickname": "Gemini Bot",
-        "opponent_age": user["age"],
+        "opponent_nickname": BOT_NICKNAME,
+        "opponent_age": human["age"],
         "turn_duration_seconds": 30
     })
 
@@ -200,19 +198,20 @@ async def websocket_endpoint(websocket: WebSocket):
             payload = message.get("payload", {})
 
             if msg_type == "queue_join":
-                nickname = payload.get("nickname", "Guest")[:16]
-                birth_year = int(payload.get("birth_year", 2000))
-                age = 2026 - birth_year
+                try:
+                    entry = matchmaking.build_entry(
+                        payload, session_id=session_id, ws=websocket, current_year=current_year()
+                    )
+                    matchmaking.add(entry)
+                except QueueRejected as exc:
+                    await manager.send_json(websocket, "error", exc.as_payload())
+                else:
+                    await manager.send_json(websocket, "queue_status",
+                                            matchmaking.status(session_id))
 
-                if age >= 18:
-                    matching_pool.append({
-                        "ws": websocket,
-                        "session_id": session_id,
-                        "nickname": nickname,
-                        "birth_year": birth_year,
-                        "age": age,
-                        "queued_at": time.time()
-                    })
+            elif msg_type == "queue_left":
+                matchmaking.remove(session_id)
+                await manager.send_json(websocket, "queue_left", {"status": "left"})
 
             elif msg_type == "player_move":
                 # Find player's room
@@ -296,7 +295,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(session_id)
         # Remove from queue if present
-        matching_pool[:] = [u for u in matching_pool if u["session_id"] != session_id]
+        matchmaking.remove(session_id)
 
         # Handle active room disconnect
         if current_room_id and current_room_id in active_rooms:
@@ -309,12 +308,25 @@ async def websocket_endpoint(websocket: WebSocket):
                 })
 
 
-async def handle_ai_turn(room: dict):
-    """Execute a GLM PvE move; use a safe center-out move if GLM is unavailable.
+def choose_fallback_move(board: list, budget_seconds: float = FALLBACK_BUDGET_SECONDS):
+    """Local reply when the LLM is unavailable (WP3-7).
 
-    Minimax is deliberately not called here during the GLM-first phase (WP3-3).
-    WP3-7 restores it as the real fallback before the checkpoint.
+    Minimax runs first and is validated against the live board; if it raises or
+    returns an unplayable column, a centre-out legal move is used instead so a
+    room can never stall. Returns (column, strategy); column is None only when
+    the board is full.
     """
+    try:
+        column = get_minimax_move(board, depth=4, bot_piece=2)
+        if isinstance(column, int) and 0 <= column < 7 and board[0][column] == 0:
+            return column, "minimax"
+    except Exception:
+        pass
+    return safe_legal_column(board), "safe_move"
+
+
+async def handle_ai_turn(room: dict):
+    """Execute a GLM PvE move; fall back to Minimax when GLM is unavailable."""
     await asyncio.sleep(0.4)  # Natural human-like pause
     engine = room["engine"]
     settings = get_ai_settings()
@@ -337,11 +349,13 @@ async def handle_ai_turn(room: dict):
         fallback_reason = "unexpected_error"
 
     if ai_col is None:
-        ai_col = safe_legal_column(engine.get_board())
+        ai_col, strategy = choose_fallback_move(engine.get_board())
         if fallback_reason and not room.get("fallback_notified"):
             room["fallback_notified"] = True
             await manager.send_json(room["p1"]["ws"], "pve_fallback_notice", {
-                "message": f"GLM unavailable ({fallback_reason}); using a safe move."
+                "message": f"AI opponent operating in local fallback mode ({fallback_reason}).",
+                "reason": fallback_reason,
+                "strategy": strategy,
             })
 
     if ai_col is None:
