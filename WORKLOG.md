@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-10-26 — QW-3 touch/pointer column selection
+
+### Change
+- Replaced mouse-only click selection with Pointer Events so touchscreens, pens and mouse input share a single activation path.
+- Added CSS-to-canvas coordinate scaling and guard checks for out-of-bounds taps, full columns, and turns that do not belong to the user.
+- Preserved desktop mouse hover preview and added a touch-friendly canvas CSS setting.
+- Added `tests/test_game_board_pointer.js`, a dependency-free Node regression test.
+
+### Verification
+- `node tests/test_game_board_pointer.js` — passed (touch/pen selection, coordinate scaling, invalid/full-column guards, turn guard, desktop hover).
+- `python -m pytest tests/ -q` — 83 passed, 2 existing FastAPI lifecycle deprecation warnings.
+- Physical iOS Safari and Android Chrome testing has not been performed; keep QW-3 in REVIEW until those checks are completed.
+
 ## 2026-10-26 — Matchmaking extraction, server-side validation, Minimax fallback
 
 - **`server/app/matchmaking.py` (new):** the FIFO pool moved out of `main.py` into a `MatchmakingQueue` with an injectable clock: `add`/`remove`/`position`/`tick`/`status`, a three-year age window, the 15-second expiry, duplicate-join rejection and a 200-entry capacity limit. `tick()` pairs and expires in one pass and returns both lists, so pairing and expiry can no longer race each other.
