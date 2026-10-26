@@ -420,6 +420,44 @@ To eliminate harassment, toxicity, and personal data leakage, users and AI agent
 | **3** | 🤔 | Thinking face with floating wobble |
 | **4** | 🎉 | Celebration confetti burst |
 
+### 7.3 Conversational AI Companion & Daily Topic Bar (Sprint 4 Extension)
+
+To satisfy user interest in richer social dialogue while strictly maintaining the ethics and safety boundaries defined in Section 5 of the Proposal:
+
+#### 1. Architectural Mode Partitioning
+- **PvE Mode (Human vs. AI Bot)**: An interactive text chatting bar is enabled. Players can type conversational messages directly to `AI Coach` (GLM-4.5-Air). Because the opponent is an AI agent, there is zero risk of interpersonal harassment, offensive contact sharing, or minor exploitation.
+- **PvP Mode (Human vs. Human)**: Free-form text chat remains omitted. Players instead have access to **"Daily Icebreaker Cards"**—a curated, rotating selection of 4 positive daily conversation starters (e.g. *"What's your favorite spot on campus?"*, *"How are your midterms going?"*, *"Coffee or tea?"*). Tapping an icebreaker broadcasts it as a safe conversation card.
+
+#### 2. WebSocket Protocol Schema
+- **Client $\rightarrow$ Server (`chat_send`)**:
+```json
+{
+  "type": "chat_send",
+  "payload": {
+    "text": "What do you think of my center column move?",
+    "topic_id": null
+  }
+}
+```
+- **Server $\rightarrow$ Client (`chat_reply`)**:
+```json
+{
+  "type": "chat_reply",
+  "payload": {
+    "from_player": 2,
+    "sender_name": "AI Coach",
+    "text": "Solid opening! Center control gives you more diagonal lines. Let's see how I respond!",
+    "timestamp": 1775554350.2
+  }
+}
+```
+
+#### 3. Safety & Resource Guardrails
+1. **Length Limit**: Messages capped at 140 characters.
+2. **Rate Limiting**: Maximum 1 message per 3 seconds per client.
+3. **Context Memory**: In PvE, the server retains at most the last 6 messages per match in ephemeral RAM to prevent token blowup.
+4. **Prompt Guardrail**: GLM system prompt instructs the model to act as a warm, encouraging university classmate, refusing any romantic advances, personal contact requests, or toxic queries.
+
 ---
 
 ## 8. Automated Test Suite Specifications
