@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-26 — Proposal additions (§2.3, §3.3, §4.3)
+
+- Inserted three subsections into `docs/proposal/AILT9019_Revised_Proposal_G31.md` and the matching `.docx`: **§2.3** matchmaking state machine, disconnect handling and capacity limits; **§3.3** a quantitative latency, load and soak benchmark protocol; **§4.3** accessibility commitments under WCAG 2.1 AA.
+- Scope was held deliberately narrow: these are the three parts of the template the submitted draft answers least. No existing section was rewritten, and no other prose was moved, so the added text can be reviewed or reverted block by block.
+- **Known inconsistency left untouched:** §2 still names Gemini 1.5 Flash with a 2.5 s deadline while the code runs GLM-4.5-Air at 3.5 s; the Minimax fallback is still unwired; `create_pve_match` still labels the bot `"Gemini Bot"`. The PDF under `docs/proposal/` has **not** been regenerated from the updated `.docx`.
+- **Commitments, not shipped behaviour:** the §2.3 claims about a `queue_status` heartbeat, a queue cap with `queue_full`, and server-side turn forfeit describe intended design. The queue tick currently matches, expires to PvE and emits `opponent_disconnected`, but does not yet send `queue_status` (QW-5) or enforce a capacity limit.
+
 ## 2026-10-26 — Deployment PR #2 review (`c29d8e7`)
 
 - Pulled and reviewed the merged deployment contribution: Dockerfile, Dockerfile-specific build-context ignore, Compose service, endpoint checker, checker regression tests, hardened systemd unit, README rewrite, and deployment notes.
