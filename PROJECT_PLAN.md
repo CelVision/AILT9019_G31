@@ -17,7 +17,7 @@ Traditional digital social platforms place heavy burdens on appearance swiping, 
 - Students meet peers over a low-stakes, turn-based browser game (Connect Four, 7 columns × 6 rows).
 - Interpersonal interaction is mediated through safe canned phrases (6 preset phrases) and reactions (4 stickers)—zero free-form text chat.
 - An in-memory matchmaking queue pairs users with peers of similar age ($|\Delta\text{Age}| \le 3$, Age $\ge 18$) within 15 seconds.
-- If no peer is available within 15 seconds, a seamless backend **AI Fallback Agent (Google Gemini 1.5 Flash)** steps in, ensuring zero wait-time and 100% service availability.
+- If no peer is available within 15 seconds, a seamless backend **AI Fallback Agent (GLM-4.5-Air)** steps in, ensuring zero wait-time and 100% service availability.
 - A local deterministic minimax heuristic guarantees fail-safe continuity if upstream LLM APIs experience rate limits, latency, or outages.
 
 ---
@@ -33,7 +33,7 @@ Traditional digital social platforms place heavy burdens on appearance swiping, 
 │ • Responsive HTML5/Canvas Web App │ • Native iOS/Android Mobile Apps   │
 │ • FastAPI + WebSocket Game Server │ • Persistent Databases / User PII  │
 │ • Age-gated Matchmaking (15s cap) │ • Free-form Unmoderated Text Chat  │
-│ • Gemini 1.5 Flash PvE Bot        │ • Audio / Video Calling            │
+│ • GLM-4.5-Air PvE Bot             │ • Audio / Video Calling            │
 │ • Local Deterministic Minimax Bot │ • Dating / Matchmaking Profiles    │
 │ • Canned Social Reaction Tray     │ • Offline Meetup Coordination      │
 │ • Remote Ubuntu VPS + SSL Deploy  │ • Desktop Agent / Pi Agent Harness │
@@ -46,8 +46,8 @@ Traditional digital social platforms place heavy burdens on appearance swiping, 
 | **Must-Have** | Turn-based 7×6 Connect Four Engine | Win (4 in row), draw (42 full), 30s turn countdown |
 | **Must-Have** | Age-Gated Matchmaking Service | Age $\ge 18$, $\|\Delta\text{Age}\| \le 3$, 15s queue timeout |
 | **Must-Have** | Real-Time WebSocket Synchronization | Room partitioning, turn transitions, disconnect recovery |
-| **Must-Have** | Server-Side LLM PvE Agent | Gemini 1.5 Flash with strict JSON schema outputs |
-| **Must-Have** | Deterministic Minimax Fallback | Activates in $<1.5\text{s}$ upon LLM timeout/error |
+| **Must-Have** | Server-Side LLM PvE Agent | GLM-4.5-Air with strict JSON schema outputs |
+| **Must-Have** | Deterministic Minimax Fallback | Activates within the configured 3.5s GLM deadline upon timeout/error |
 | **Must-Have** | Canned Communication Tray | 6 phrases, 4 stickers; zero free-text vulnerability |
 | **Should-Have** | Dual AI Personalities | "Casual Explorer" vs. "Tactical Challenger" |
 | **Should-Have** | Post-Match Mutual Rematch | Rematch handshake without re-entering queue |
@@ -77,7 +77,7 @@ graph TD
     WP2 --> T23["T2.3 Age-Gated FIFO Queue (|ΔAge|≤3)"]
     WP2 --> T24["T2.4 Disconnect & State Recovery"]
 
-    WP3 --> T31["T3.1 Gemini 1.5 Flash JSON Integration"]
+    WP3 --> T31["T3.1 GLM-4.5-Air JSON Integration"]
     WP3 --> T32["T3.2 Prompt Design & Board Serializer"]
     WP3 --> T33["T3.3 Deterministic Minimax Engine"]
     WP3 --> T34["T3.4 Dual Bot Persona Tuning"]
@@ -110,8 +110,8 @@ gantt
     section Week 7 (Oct 12 - Oct 18)
     VPS Provisioning, Nginx & SSL Configuration       :2026-10-12, 2026-10-14
     Age-Gated Matchmaking Service (|ΔAge| ≤ 3)        :2026-10-13, 2026-10-15
-    Gemini 1.5 Flash PvE Integration                  :2026-10-14, 2026-10-16
-    Deterministic Minimax Fallback (<1.5s switch)     :2026-10-15, 2026-10-17
+    GLM-4.5-Air PvE Integration                       :2026-10-14, 2026-10-16
+    Deterministic Minimax Fallback (<3.5s switch)     :2026-10-15, 2026-10-17
     End-to-End PvP/PvE Integration Testing            :2026-10-17, 2026-10-18
 
     section Week 8 (Oct 19 - Oct 25)
@@ -140,9 +140,9 @@ gantt
 - **Tasks**:
   1. Deploy FastAPI backend onto Ubuntu Linux VPS, configure Nginx reverse proxy with HTTPS and WSS (Let's Encrypt SSL).
   2. Implement in-memory matchmaking queue with 15-second countdown timer and $|\Delta\text{Age}| \le 3$ age filtering.
-  3. Integrate Google Gemini 1.5 Flash API via structured JSON response (`{"column": int, "canned_reaction_id": int}`).
-  4. Build server-side deterministic Minimax heuristic bot with 1.5s timeout trigger to handle API disruptions.
-- **Exit Gate**: Solo player queues for 15s $\rightarrow$ automatically transitions into PvE match against Gemini/heuristic bot on public HTTPS URL.
+  3. Integrate GLM-4.5-Air API via structured JSON response (`{"column": int, "canned_reaction_id": int}`).
+  4. Build server-side deterministic Minimax heuristic bot with a 3.5s timeout trigger to handle API disruptions.
+- **Exit Gate**: Solo player queues for 15s $\rightarrow$ automatically transitions into PvE match against GLM/Minimax on public HTTPS URL.
 
 #### Week 8: Verification, Polish & Cohort Testing (Oct 19 – Oct 25)
 - **Goal**: Empirical validation, quantitative test passing, and user trials.
@@ -167,7 +167,7 @@ gantt
 
 | Risk ID | Description | Likelihood | Impact | Concrete Mitigation |
 | :---: | :--- | :---: | :---: | :--- |
-| **R-01** | **LLM API Latency / Quota Exhaustion**<br>Gemini API rate limits or takes $>2.5\text{s}$ to respond. | High | High | Server maintains a strict 1.5s response deadline; instantly falls back to local deterministic minimax solver without interrupting the WebSocket session. |
+| **R-01** | **LLM API Latency / Quota Exhaustion**<br>GLM API rate limits or takes longer than the configured deadline to respond. | High | High | Server maintains a strict 3.5s response deadline; instantly falls back to local deterministic Minimax without interrupting the WebSocket session. |
 | **R-02** | **Player Age Spoofing & Underage Access**<br>Minors entering or adults pairing with large age gaps. | Med | Critical | Strict registration barrier rejects Age $<18$. Strict $|\Delta\text{Age}| \le 3$ rule enforced server-side. Zero persistent PII stored. |
 | **R-03** | **WebSocket Connection Drops / Mobile Sleep**<br>Mobile browser switches apps or drops Wi-Fi. | High | Med | Ping/pong heartbeat every 5s; 10s reconnection grace period before declaring forfeit or switching opponent to AI. |
 | **R-04** | **VPS Memory Bloat under Load**<br>Abandoned WebSocket rooms leaking memory. | Med | Med | Rooms are strictly ephemeral. `disconnect` triggers explicit cleanup of room state. Target memory consumption $<50\text{MB}$ RAM. |

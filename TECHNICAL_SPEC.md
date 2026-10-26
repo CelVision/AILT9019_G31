@@ -49,9 +49,9 @@ The system follows a lightweight, real-time client-server architecture designed 
 │              ┌──────────────────────┴──────────────────────┐           │
 │              ▼                                             ▼           │
 │  ┌───────────────────────────────┐           ┌──────────────────────┐  │
-│  │ Primary AI: Gemini 1.5 Flash  │           │ Fallback AI: Minimax │  │
+│  │ Primary AI: GLM-4.5-Air       │           │ Fallback AI: Minimax │  │
 │  │ • Structured JSON Schema      │           │ • Alpha-Beta Pruning │  │
-│  │ • Latency Budget: < 1.5s      │ ──[Fail]─►│ • Deterministic      │  │
+│  │ • Latency Budget: < 3.5s      │ ──[Fail]─►│ • Deterministic      │  │
 │  │ • Canned Social Reaction Pick │           │ • Latency: < 50ms    │  │
 │  └───────────────────────────────┘           └──────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────┘
@@ -159,6 +159,19 @@ Sent on the game summary screen to challenge the same opponent.
 }
 ```
 
+#### 5. `error`
+Returned when the server rejects malformed registration, moves, or reactions.
+```json
+{
+  "type": "error",
+  "payload": {
+    "code": "invalid_birth_year",
+    "field": "birth_year",
+    "message": "Birth year must be between 1920 and 2008 (18+)."
+  }
+}
+```
+
 ---
 
 ### 3.2 Server-to-Client (S2C) Events
@@ -175,6 +188,9 @@ Broadcasts queue progression during the 15-second matchmaking countdown.
   }
 }
 ```
+
+The server emits this frame immediately after a successful `queue_join` and
+approximately once per second until the player is matched or routed to PvE.
 
 #### 2. `match_found`
 Sent when a PvP match is paired or PvE fallback triggers.
@@ -291,7 +307,7 @@ If `move_count == 42` and no 4-in-a-row exists, set `winner = 0` (Draw).
 
 ### 4.4 Turn Timers
 - Turn deadline: 30 seconds per turn.
-- If deadline expires: The server auto-plays the lowest unoccupied central column or declares forfeit.
+- If deadline expires: The server declares the active player the loser and broadcasts `game_over` with reason `turn_timeout`.
 
 ---
 
@@ -300,9 +316,9 @@ If `move_count == 42` and no 4-in-a-row exists, set `winner = 0` (Draw).
 ```mermaid
 flowchart TD
     Start["AI Turn Triggered"] --> Serialize["Serialize 7x6 Board Matrix & Legal Columns"]
-    Serialize --> GeminiReq["Dispatch Prompt to Gemini 1.5 Flash API (1.5s Deadline)"]
+    Serialize --> GLMReq["Dispatch Prompt to GLM-4.5-Air API (3.5s Deadline)"]
     
-    GeminiReq --> CheckRes{Response Received < 1.5s?}
+    GLMReq --> CheckRes{Response Received < 3.5s?}
     CheckRes -- Yes --> ValidateJSON{Valid JSON & Legal Column?}
     ValidateJSON -- Yes --> CommitMove["Commit Move & Broadcast Reaction"]
     
@@ -313,8 +329,8 @@ flowchart TD
     NotifyClient --> CommitMove
 ```
 
-### 5.1 Primary AI: Google Gemini 1.5 Flash
-- **API Target**: Google Gemini 1.5 Flash via official SDK / REST API.
+### 5.1 Primary AI: GLM-4.5-Air
+- **API Target**: GLM-4.5-Air through the provider's OpenAI-compatible REST API.
 - **Output Format Constraint**: Strict JSON Schema:
 ```json
 {
@@ -345,9 +361,9 @@ Respond STRICTLY with the requested JSON schema.
 
 ### 5.2 Deterministic Minimax Fallback Bot
 - **Activation Criteria**: Triggered immediately if:
-  1. Gemini API fails to return within 1.5 seconds.
-  2. Gemini API returns HTTP 429 (rate limit) or HTTP 500 (internal error).
-  3. Gemini returns an invalid or full column index.
+  1. GLM API fails to return within 3.5 seconds.
+  2. GLM API returns HTTP 429 (rate limit) or HTTP 500 (internal error).
+  3. GLM returns an invalid or full column index.
 - **Algorithm**:
   - Minimax with Alpha-Beta Pruning (Search Depth: 4).
   - **Evaluation Heuristic**:
@@ -439,16 +455,16 @@ To eliminate harassment, toxicity, and personal data leakage, users and AI agent
 
 | Test ID | Injected Fault Type | Simulation Mechanism | Expected System Response | Latency Bound |
 | :---: | :--- | :--- | :--- | :---: |
-| **B-01** | HTTP 500 Internal Error | Mock Gemini client throws `500 Server Error` | Fallback to Minimax; notify client | $<1.5\text{s}$ |
-| **B-02** | HTTP 500 Internal Error | Mock Gemini client throws `500 Server Error` | Fallback to Minimax; notify client | $<1.5\text{s}$ |
-| **B-03** | HTTP 429 Quota Exhaustion | Mock Gemini client throws `RateLimitError` | Fallback to Minimax; notify client | $<1.5\text{s}$ |
-| **B-04** | HTTP 429 Quota Exhaustion | Mock Gemini client throws `RateLimitError` | Fallback to Minimax; notify client | $<1.5\text{s}$ |
-| **B-05** | Extreme Network Latency | Injected sleep `3.5s` on response | Timeout at 1.5s; Fallback to Minimax | $=1.5\text{s}$ |
-| **B-06** | Extreme Network Latency | Injected sleep `5.0s` on response | Timeout at 1.5s; Fallback to Minimax | $=1.5\text{s}$ |
-| **B-07** | Malformed JSON String | Returns `"I choose column three"` | Fallback to Minimax; notify client | $<1.5\text{s}$ |
-| **B-08** | Illegal Column Value | Returns `{"column": 9}` | Fallback to Minimax; notify client | $<1.5\text{s}$ |
-| **B-09** | Full Column Move | Returns column that is already full | Fallback to Minimax; notify client | $<1.5\text{s}$ |
-| **B-10** | Upstream Socket Reset | Injected `ConnectionResetError` | Fallback to Minimax; notify client | $<1.5\text{s}$ |
+| **B-01** | HTTP 500 Internal Error | Mock GLM client throws `500 Server Error` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-02** | HTTP 500 Internal Error | Mock GLM client throws `500 Server Error` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-03** | HTTP 429 Quota Exhaustion | Mock GLM client throws `RateLimitError` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-04** | HTTP 429 Quota Exhaustion | Mock GLM client throws `RateLimitError` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-05** | Extreme Network Latency | Injected sleep `3.5s` on response | Timeout at 3.5s; Fallback to Minimax | $=3.5\text{s}$ |
+| **B-06** | Extreme Network Latency | Injected sleep `5.0s` on response | Timeout at 3.5s; Fallback to Minimax | $=3.5\text{s}$ |
+| **B-07** | Malformed JSON String | Returns `"I choose column three"` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-08** | Illegal Column Value | Returns `{"column": 9}` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-09** | Full Column Move | Returns column that is already full | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-10** | Upstream Socket Reset | Injected `ConnectionResetError` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
 
 ---
 
@@ -463,16 +479,16 @@ AILT9019_G31/
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── main.py                     # ASGI Entrypoint & WebSocket Router
-│   │   ├── config.py                   # Environment & Gemini API Settings
+│   │   ├── config.py                   # Environment & GLM API Settings
 │   │   ├── game_engine.py              # 7x6 Connect Four Physics & Rules
 │   │   ├── matchmaking.py              # In-memory FIFO Queue & Age Filter
 │   │   ├── room_manager.py             # Active Room Lifecycle & Session State
 │   │   ├── ai/
 │   │   │   ├── __init__.py
-│   │   │   ├── gemini_client.py        # Gemini 1.5 Flash JSON Integration
+│   │   │   ├── glm_client.py           # GLM-4.5-Air JSON Integration
 │   │   │   └── minimax_fallback.py     # Deterministic Heuristic Bot
 │   │   └── schemas.py                  # Pydantic Protocol Envelopes
-│   └── requirements.txt                # FastAPI, Uvicorn, google-genai, websockets
+│   └── requirements.txt                # FastAPI, Uvicorn, httpx, websockets
 ├── client/                             # Frontend Web Application
 │   ├── index.html                      # Single-page HTML5 Layout
 │   ├── css/
