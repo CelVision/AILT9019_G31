@@ -8,7 +8,7 @@ Contribution area: QW-3, frontend input.
 - Touch selection no longer depends on a mouse-hover state; coordinates are mapped correctly when CSS scales the canvas.
 - Kept desktop hover previews and guarded against illegal selections.
 - Added `tests/test_game_board_pointer.js`.
-- Verification: pointer regression test passes; full Python suite passes (83 tests, 2 existing deprecation warnings). Physical mobile-device testing remains outstanding.
+- Verification: pointer regression test passes; full Python suite passes (86 tests, 2 existing deprecation warnings). Physical mobile-device testing remains outstanding.
 
 ## 2026-10-26 — Local acceptance hardening
 
