@@ -43,6 +43,16 @@ End-to-end path: request → method → result, and what the team will actually 
 
 *Figure 1: End-to-End System Architecture and Interaction Pipeline*
 
+### 2.3 Matchmaking State Machine, Disconnect Handling and Capacity Limits
+
+Every session moves through one server-owned state machine, and the browser only ever renders the state the server reports. The four states are IDLE → QUEUED → IN_MATCH → CLOSED. The QUEUED → IN_MATCH transition is decided inside a single matchmaking tick that runs every 500 ms; the browser cannot promote itself into a match, and it cannot see another player's identity or age until a room has actually been created.
+
+Each tick performs three steps in order: (1) it scans the FIFO pool for the earliest compatible pair whose age difference is within three years and atomically removes both entries; (2) it evicts any entry whose queue age has reached 15 seconds and routes that user into a PvE room; (3) it broadcasts a queue_status frame carrying elapsed_seconds and timeout_seconds, so the on-screen countdown is server-sourced rather than client-invented. Because matching and expiry happen in the same pass, a user can never be matched after already being routed to an AI opponent.
+
+Disconnection is treated as a first-class event rather than an exception. When a socket closes, the session is removed from the queue and from its room; the surviving player immediately receives an opponent_disconnected frame, the room is destroyed with its board state, and the end-game modal offers two explicit choices — re-queue for a human peer, or continue against the AI. No room can therefore outlive its last human socket, and no orphaned room can accumulate in memory across a long-running deployment.
+
+The 30-second turn timer is likewise enforced on the server, not in the client: a turn that exceeds the cap is forfeited, so an idle or vanished client can never freeze the opponent's match. On the capacity side, the deployment runs a single Uvicorn worker precisely so that the queue and the room table cannot diverge across processes. Each room costs a 7×6 integer board plus a handful of small fields — under 2 KB — and the queue is capped at a configurable maximum (200 by default); beyond that the server answers queue_full with a retry-after hint instead of silently accepting work it cannot serve. If horizontal scaling is ever required, the state machine is the component that would move to a shared store; the client protocol would not change.
+
 ## 3. Evaluation and test
 
 How the team will tell the product works, including at least one case it should fail safely or refuse.
@@ -69,6 +79,23 @@ How the team will tell the product works, including at least one case it should 
 
 We simulate upstream API disruptions (HTTP 500 internal server error, HTTP 429 quota exhaustion, and forced 3.5-second network latency). Passing Criterion: 10/10 (100%) graceful degradation. The backend detects API unavailability within 1.5 seconds, falls back to the local deterministic heuristic bot without disconnecting the WebSocket room, and triggers an on-screen toast notification: "AI opponent operating in local fallback mode." The game proceeds seamlessly to completion with zero unhandled runtime exceptions. Live human PvP matchmaking remains 100% operational and unaffected.
 
+### 3.3 Quantitative Latency, Load and Reliability Benchmarks
+
+The two suites above establish functional correctness; this third protocol establishes that the prototype stays usable under real network and concurrency conditions. It separates transport cost from AI cost by running the same scripted 20-move game twice: Phase 1 with the AI disabled (engine and WebSocket only) and Phase 2 with GLM enabled, so that a slow opponent can be attributed to the provider rather than to the room manager.
+
+| Metric | How it is measured | Pass bar |
+| --- | --- | --- |
+| WebSocket hop latency | Client timestamp before send vs. server receipt, and the mirrored echo, over 200 frames | p95 ≤ 150 ms |
+| AI move latency | Server-side timer around the GLM call, 50 consecutive PvE moves | p95 ≤ 3.5 s (pilot readings: 2.3–2.9 s) |
+| Fallback activation | Fault injection (Test Suite B) with the clock started at the error response | ≤ 1.5 s, room never disconnects |
+| Queue pairing latency | Time from the second queue_join to match_found for a compatible pair | p95 ≤ 1.0 s (tick is 500 ms) |
+| Concurrent load | 40 simulated sockets in 20 rooms replaying scripted games for 10 minutes | RSS < 50 MB, 0 stalled rooms |
+| Soak stability | 100 completed matches back-to-back | 0 unhandled exceptions, 0 leaked rooms |
+
+The harness is a headless Python websockets client that opens N sockets, replays a fixed move script, and records four timestamps per event (client send, server receipt, server send, client receive). Each configuration is run three times; we report the median and the 95th percentile rather than a single best case, and the raw CSV is committed under docs/eval/ so that any reviewer can re-derive the numbers instead of trusting a summary table. Memory is sampled once per second from the server process's resident set size.
+
+These thresholds are deliberately tighter than the user-visible experience requires: a 150 ms hop keeps the board feeling synchronous on a Hong Kong mobile connection, and a 3.5 s AI deadline matches the hard timeout already enforced in code, so a benchmark failure and a production stall are the same event rather than two different ones.
+
 ## 4. Distribution and accessibility
 
 How someone else can open the app: API setup, first use without a coding background, and (if in scope) other agent environments.
@@ -89,6 +116,19 @@ End-users and course evaluators can access and play the game directly by visitin
 If the external LLM API becomes unavailable or experiences rate-limiting, the application remains fully functional: the server automatically falls back to local heuristic game algorithms, ensuring that any classmate or reviewer can evaluate the prototype at any time.
 
 This project is conceived and packaged strictly as an interactive web mini-game; exporting reusable skill modules or tool manifests for other agent platforms (such as Pi Agent or desktop agent harnesses) is explicitly out of scope for this semester's prototype.
+
+### 4.3 Accessibility and Inclusive Access
+
+Because the board is drawn on a Canvas element, accessibility cannot be inherited from the DOM — it has to be designed in. We target WCAG 2.1 Level AA for everything the game can control:
+
+- **Perceivable.** Body text meets a 4.5:1 contrast ratio and interactive borders 3:1. Red and yellow tokens are never distinguished by hue alone: each carries a distinct ring treatment and a P1/P2 glyph, so the board stays readable for deuteranopic users and in greyscale. The full board state is mirrored into a visually hidden HTML table addressed by row and column, and each move is announced through an aria-live region (“Red plays column 4. Yellow's turn.”).
+- **Operable.** The entire match is playable from the keyboard: Tab reaches the board, the arrow keys move a column cursor, Space or Enter drops a token, Tab reaches the phrase tray, and Escape closes any modal. Focus is always visible. Nothing is drag-only, touch targets are at least 44×44 px, and the layout holds at a 320 px viewport.
+- **Understandable.** Labels are plain-language and consistent, validation messages appear next to the field that caused them, and no status is communicated by colour alone.
+- **Robust.** Registration, the phrase tray and the result modal are semantic HTML with real buttons and labels; the canvas carries an accessible name and a text alternative that mirrors the grid.
+
+Two timing decisions follow from the same principle. Honouring prefers-reduced-motion removes the token bounce and the win confetti without removing any information. More importantly, the 30-second turn timer is a genuine barrier for users with motor or cognitive impairments, so the match configures a 60-second timer with a warning at 10 seconds remaining, and no match can be lost to a mis-click in its first three seconds.
+
+Verification is part of the evaluation, not a promise: a keyboard-only walkthrough of the full journey, a screen-reader pass with VoiceOver on macOS and NVDA on Windows, an axe DevTools scan with zero critical issues, and at least two participants in the 15-person cohort who routinely use assistive settings.
 
 ## 5. Ethics and risks
 
