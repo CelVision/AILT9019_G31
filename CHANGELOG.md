@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-26 — Touchscreen column selection
+
+Contribution area: QW-3, frontend input.
+
+- Added Pointer Event handling for touch, pen, and mouse input in `client/js/game_board.js`.
+- Touch selection no longer depends on a mouse-hover state; coordinates are mapped correctly when CSS scales the canvas.
+- Kept desktop hover previews and guarded against illegal selections.
+- Added `tests/test_game_board_pointer.js`.
+- Verification: pointer regression test passes; full Python suite passes (83 tests, 2 existing deprecation warnings). Physical mobile-device testing remains outstanding.
+
 ## 2026-10-23 — Deployment implementation
 
 Branch: `deploy_XIANG-HANCHENG`. Contribution area: XIANG HANCHENG, deployment and distribution. Based on main commit `3726563`.
