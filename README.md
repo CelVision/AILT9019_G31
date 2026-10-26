@@ -20,11 +20,12 @@ Contemporary digital social platforms rely almost exclusively on appearance-driv
 1. **Activity-First Socializing**: Interpersonal interaction takes place within a live, turn-based 7×6 Connect Four game. The shared game rules eliminate awkward pauses and lower emotional stakes.
 2. **Safe Canned Communication**: Free-form text input is completely omitted by design. Players interact exclusively using a sportsmanship palette of **6 preset phrases** and **4 reaction stickers** with animated speech bubbles.
 3. **Age-Gated In-Memory Matchmaking**: Players complete lightweight guest registration (Nickname + Birth Year). The backend enforces $\text{Age} \ge 18$ and pairs users with peers within an acceptable age difference ($|\Delta\text{Age}| \le 3$).
-4. **Guaranteed Zero-Wait Availability (AI Fallback)**: If a human peer is not found within the 15-second matchmaking queue, the server automatically routes the player into a PvE room with an intelligent **GLM-4.5-Air** opponent (temporary; **GLM-4.7-Flash** is the target once account access is enabled).
-5. **Fail-Safe Fallback**: If the upstream LLM returns a rate-limit/error response or exceeds the **3.5s** move deadline, the server immediately plays a safe center-out legal move so the room never stalls; the deterministic Minimax bot is retained and will be re-wired in WP3-7.
-6. **Zero Persistent PII**: All user sessions and room memory exist strictly in RAM and are immediately purged upon socket disconnection.
+4. **Server-Owned Queue**: join requests are validated server-side (nickname 2–16, age $\ge 18$) and rejected with a structured `error` frame; a `queue_status` heartbeat every second drives the on-screen countdown from server state rather than a browser timer.
+5. **Guaranteed Zero-Wait Availability (AI Fallback)**: If a human peer is not found within the 15-second matchmaking queue, the server automatically routes the player into a PvE room with an intelligent **GLM-4.5-Air** opponent (temporary; **GLM-4.7-Flash** is the target once account access is enabled).
+6. **Fail-Safe Fallback**: If the upstream LLM returns a rate-limit/error response or exceeds the **3.5s** move deadline, the server plays a local Minimax move (depth 4, validated against the live board) inside the same turn, so the room never stalls; a centre-out legal move is used only if Minimax itself fails.
+7. **Zero Persistent PII**: All user sessions and room memory exist strictly in RAM and are immediately purged upon socket disconnection.
 
-> **⚠️ Current sprint note (2026-10-22):** PvE temporarily uses **GLM-4.5-Air** because this account cannot yet access `glm-4.7-flash` or `glm-4.5-flash`. The live Connect Four prompt measured **~2.3–2.9s**, so the local deadline is **3.5s**. **GLM-4.7-Flash** remains the target once it is enabled in the GLM console. Gemini integration is deferred. The Minimax fallback is temporarily unwired; if GLM is unavailable, the server plays a safe center-out move so the room never stalls. See [docs/WORKLOG.md](docs/WORKLOG.md) for the current architecture and handoff notes.
+> **⚠️ Current sprint note (2026-10-22):** PvE temporarily uses **GLM-4.5-Air** because this account cannot yet access `glm-4.7-flash` or `glm-4.5-flash`. The live Connect Four prompt measured **~2.3–2.9s**, so the local deadline is **3.5s**. **GLM-4.7-Flash** remains the target once it is enabled in the GLM console. Gemini integration is deferred. The Minimax fallback is wired again (WP3-7): if GLM is unavailable, the server answers with a local Minimax move and reports `strategy: minimax` in `pve_fallback_notice`. See [docs/WORKLOG.md](docs/WORKLOG.md) for the current architecture and handoff notes.
 
 ---
 
@@ -75,7 +76,7 @@ AILT9019_G31/
 │       ├── main.py                     # ASGI entrypoint & WebSocket endpoint (/ws/game)
 │       ├── config.py                   # Environment-backed AI settings & secret hygiene
 │       ├── game_engine.py              # 7x6 Connect Four rules, win & draw logic
-│       ├── matchmaking.py              # In-memory FIFO queue & age filtering (planned)
+│       ├── matchmaking.py              # In-memory FIFO queue, age filtering, 15s expiry & capacity
 │       ├── room_manager.py             # Active room lifecycle & ephemeral state (planned)
 │       ├── schemas.py                  # Pydantic protocol models & event payloads
 │       └── ai/
@@ -88,8 +89,8 @@ AILT9019_G31/
 │   ├── test_glm_client.py              # Mocked GLM request/parse/validation tests
 │   ├── test_ai_turn.py                 # GLM PvE turn + safe-move fallback tests
 │   ├── test_deployment_check.py        # Deployment checker regression tests
-│   ├── test_suite_a_matchmaking.py     # Planned: 20 age boundary cases
-│   └── test_suite_b_fault_injection.py # Planned: 10 LLM fault injection tests
+│   ├── test_suite_a_matchmaking.py     # Test Suite A: 20 age boundary cases + WS rejections
+│   └── test_suite_b_fault_injection.py # Test Suite B: 10 LLM fault injections + Minimax block
 └── deploy/                             # Production deployment configuration
     ├── Dockerfile                      # Non-root single-worker application image
     ├── Dockerfile.dockerignore         # Build-context allowlist

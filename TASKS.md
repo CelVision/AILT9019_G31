@@ -39,10 +39,10 @@ Welcome to the team task tracker! This document is designed for all team members
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **WP0: Proposal & Admin** | Course submissions & reviews | 3 | 2 | 1 | 🟡 Final Polish |
 | **WP1: Frontend Client** | HTML5/Canvas UI & Canned Chat | 8 | 4 | 0 | 🟢 Underway (50%) |
-| **WP2: Backend Networking** | FastAPI, WebSockets & Queue | 7 | 3 | 0 | 🟢 Underway (43%) |
-| **WP3: AI & GLM** | GLM-4.5-Air (temp), model config & fallback | 8 | 3 | 1 | 🟡 GLM-first (38%, WP3-3 in review) |
+| **WP2: Backend Networking** | FastAPI, WebSockets & Queue | 7 | 5 | 0 | 🟢 Mostly Done (71%) |
+| **WP3: AI & GLM** | GLM-4.5-Air (temp), model config & fallback | 8 | 4 | 1 | 🟡 Minimax fallback restored (50%) |
 | **WP4: Infrastructure & VPS**| Ubuntu VPS, Nginx SSL & WSS | 4 | 1 | 0 | 🟢 Configs Ready |
-| **WP5: Testing & Evaluation**| Suites A & B, 15-User Cohort | 6 | 1 | 0 | 🟢 Engine Tests Pass |
+| **WP5: Testing & Evaluation**| Suites A & B, 15-User Cohort | 6 | 3 | 0 | 🟢 Suites A & B automated (50%) |
 
 > Quick Wins are tracked separately below and are **not** included in these totals.
 
@@ -68,8 +68,8 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
 | **QW-1** | Fix static assets served from `/` | ✅ DONE (10-21) | 15 min | Critical | `server/app/main.py` | `http://127.0.0.1:8000/` loads CSS/JS with HTTP 200; `/ws/game` still works |
 | **QW-2** | Set `--workers 1` and move the env file outside the repo | ✅ DONE (10-21) | 10 min | Critical | `deploy/connectfour.service` | Service starts with `/etc/connectfour/connectfour.env`; rooms/queue stay consistent |
 | **QW-3** | Add touch/pointer column selection | ⬜ TODO | 30 min | High | `client/js/game_board.js` | Tapping a column drops a token on iOS/Android; desktop hover unchanged |
-| **QW-4** | Validate `queue_join` server-side and return an `error` frame | ⬜ TODO | 45 min | High | `server/app/main.py`, `client/js/app.js` | Underage, malformed birth year, and nickname length 2–16 get a clear inline error; no silent drop |
-| **QW-5** | Emit `queue_status` every second | ⬜ TODO | 30 min | Medium | `server/app/main.py`, `client/js/app.js` | UI countdown matches server `elapsed_seconds` / `timeout_seconds` |
+| **QW-4** | Validate `queue_join` server-side and return an `error` frame | ✅ DONE (10-26) | 45 min | High | `server/app/main.py`, `server/app/matchmaking.py`, `client/js/app.js` | Underage, malformed birth year, and nickname length 2–16 get a clear inline error; no silent drop |
+| **QW-5** | Emit `queue_status` every second | ✅ DONE (10-26) | 30 min | Medium | `server/app/main.py`, `client/js/app.js` | UI countdown matches server `elapsed_seconds` / `timeout_seconds` |
 | **QW-6** | Highlight the last dropped token | ⬜ TODO | 30 min | Low | `client/js/game_board.js`, `client/js/app.js` | Last token pulses; highlight clears on the next move |
 
 **Completion notes (2026-10-21):** QW-1 is verified by `tests/test_app_smoke.py` (root HTML, CSS, JS, `/api/health`, `/ws/game`). QW-2 is updated in the repo; applying it on the VPS and confirming the service restart is still pending.
@@ -153,18 +153,22 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
 - [ ] **[TODO]** `WP3-6`: Add optional model-name selector + server allowlist | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-22
   - Onboarding field defaults to `glm-4.5-air` (temporary; target `glm-4.7-flash`); the server accepts only allowlisted names.
   - Invalid model returns a clear error; never forward arbitrary strings to the provider.
-- [ ] **[TODO]** `WP3-7`: Re-enable Minimax fallback before the checkpoint | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-24
-  - Restore the `pve_fallback_notice` + Minimax path after GLM validation; then run Suite B.
-  - If intentionally skipped, record the deviation in the checkpoint report and demo notes.
+- [x] **[DONE]** `WP3-7`: Re-enable Minimax fallback before the checkpoint | **Assignee**: @Team | **Completed**: 2026-10-26
+  - `choose_fallback_move()` now plays Minimax (depth 4) when GLM fails, validates the column against the live board, and only degrades to a centre-out legal move if Minimax raises or returns an illegal column.
+  - `pve_fallback_notice` now carries `reason` and `strategy` (`minimax` / `safe_move`).
+  - Covered by Test Suite B, including a must-block case.
 - [ ] **[TODO]** `WP3-8`: Update AI references in README, TECH_SPEC, and PROJECT_PLAN (Gemini → GLM; deferred Minimax) | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-24
   - Keep the formal docs consistent with the provider actually implemented; record the deviation.
 
 ### WP2: Age-Gated Matchmaking Queue
-- [ ] **[TODO]** `WP2-5`: Implement in-memory FIFO Matchmaking Queue (`server/app/matchmaking.py`) | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-14
-  - Enforce age boundary: $\text{Age} \ge 18$.
+- [x] **[DONE]** `WP2-5`: Implement in-memory FIFO Matchmaking Queue (`server/app/matchmaking.py`) | **Assignee**: @Team | **Completed**: 2026-10-26
+  - Enforce age boundary: $\text{Age} \ge 18$ (rejected with `error` frame, code `underage`).
   - Enforce age gap constraint: $|\text{Age}_A - \text{Age}_B| \le 3$.
-- [ ] **[TODO]** `WP2-6`: Implement 15-second Queue Timeout & PvE Routing | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-15
+  - Also adds duplicate-join rejection and a 200-entry capacity limit (`queue_full`).
+  - Covered by Test Suite A (`tests/test_suite_a_matchmaking.py`).
+- [x] **[DONE]** `WP2-6`: Implement 15-second Queue Timeout & PvE Routing | **Assignee**: @Team | **Completed**: 2026-10-26
   - If no human peer matches within 15 seconds, pop user and seamlessly launch PvE room with AI bot.
+  - Pairing and expiry run in the same queue tick, so a player can never be matched after being routed to PvE. Live check: PvE room opened at 15.3 s.
 
 ### WP4: DevOps & Cloud Infrastructure
 - [ ] **[TODO]** `WP4-1`: Provision Ubuntu Linux VPS instance & install dependencies | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-13
@@ -184,14 +188,14 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
 ## 🧪 Sprint 3: Week 8 — Automated Testing, Evaluation & Polish (Oct 19 – Oct 25)
 
 ### WP5: Automated Test Suites
-- [ ] **[TODO]** `WP5-1`: Author and run **Test Suite A** (20 Age Boundary Pairs) (`tests/test_suite_a_matchmaking.py`) | **Assignee**: @Unassigned | **Priority**: Critical | **Due**: 2026-10-20
+- [x] **[DONE]** `WP5-1`: Author and run **Test Suite A** (20 Age Boundary Pairs) (`tests/test_suite_a_matchmaking.py`) | **Assignee**: @Team | **Completed**: 2026-10-26
   - 10 valid pairs ($|\Delta\text{Age}| \le 3$, Age $\ge 18$) $\rightarrow$ 100% paired PvP within 15s.
   - 5 age-gap refused pairs ($|\Delta\text{Age}| > 3$) $\rightarrow$ 100% held in queue, routed to PvE at 15s.
   - 5 underage / malformed profiles (age $<18$, negative, null, text) $\rightarrow$ 100% rejected at form.
-- [ ] **[BLOCKED]** `WP5-2`: Author and run **Test Suite B** (10 LLM Fault Injections) (`tests/test_suite_b_fault_injection.py`) | **Assignee**: @Unassigned | **Priority**: Critical | **Due**: 2026-10-22
+- [x] **[DONE]** `WP5-2`: Author and run **Test Suite B** (10 LLM Fault Injections) (`tests/test_suite_b_fault_injection.py`) | **Assignee**: @Team | **Completed**: 2026-10-26
   - Inject HTTP 500 (2 cases), HTTP 429 quota exhaustion (2 cases), network latency $>3.5\text{s}$ (2 cases), malformed JSON / illegal column (4 cases).
   - Mock the GLM adapter; verify 100% fallback in $<1.5\text{s}$ with zero unhandled exceptions.
-  - **Blocked** until WP3-7 restores the Minimax path.
+  - Unblocked by WP3-7; all 10 cases pass, plus a must-block case and a GLM-success control.
 
 ### WP5: User Experience & Usability Cohort Testing
 - [ ] **[TODO]** `WP5-3`: Prepare Cohort Evaluation Protocol & 5-point Likert Survey Form | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-21
