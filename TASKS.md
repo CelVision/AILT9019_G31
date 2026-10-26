@@ -2,12 +2,12 @@
 
 Welcome to the team task tracker! This document is designed for all team members to view, claim, update, and add development tasks as we build toward the **Mid-Term Checkpoint (Monday, October 26)**.
 
-**Last updated:** 2026-10-23 · **Detailed worklog:** [docs/WORKLOG.md](docs/WORKLOG.md)
+**Last updated:** 2026-10-26 · **Detailed worklog:** [docs/WORKLOG.md](docs/WORKLOG.md)
 
 ## 🗞️ Recent Updates
 
+- **2026-10-26** — Reviewed merged deployment PR #2 (`c29d8e7`). **42 tests pass**; the local endpoint checker passed all 8 HTTP/asset/WS checks; Docker build and VPS/DNS/TLS/public-URL acceptance remain unverified. Formal `TECHNICAL_SPEC.md`/`PROJECT_PLAN.md` still say Gemini 1.5 Flash and 1.5s; update them to GLM-4.5-Air/3.5s before the checkpoint report.
 - **2026-10-23 — XIANG HANCHENG deployment contribution:** added container configuration and an endpoint checker under `deploy/`, checker tests under `tests/`, and [changelog](docs/CHANGELOG.md). Setup instructions are in README. VPS/domain/certificate acceptance remains open; configuration preparation is not a completed public deployment.
-
 - **2026-10-22** — Switched the temporary PvE model to **`glm-4.5-air`** with a **3.5s** timeout. **Live smoke passed:** `column=3`, **2883.0ms**. The target remains `glm-4.7-flash` once the GLM console grants access. README, env template, config, tests, and worklog were updated; **26 tests pass**.
 - **2026-10-22** — `GLM-4.7-FlashX` is enabled (`200`) but unusably slow: a trivial call took **28.4s**, and a real Connect Four prompt exceeded **35s**. Not viable for the turn target.
 - **2026-10-22** — Pre-push evaluation (before the model switch): **26 tests pass**, `server/.env` is ignored, and the live key is absent from tracked files. The old-model (`glm-4-flash`) smoke succeeded at **1737.9ms**; at that time the timeout was 2.5s and the provider entitlement issue blocked a successful in-game turn. See the [worklog](docs/WORKLOG.md).
