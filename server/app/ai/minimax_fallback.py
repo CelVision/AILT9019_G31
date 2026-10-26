@@ -1,6 +1,6 @@
 """
 Deterministic Minimax Connect Four Solver with Alpha-Beta Pruning.
-Serves as the local fail-safe heuristic engine if Gemini 1.5 Flash times out (>1.5s) or fails.
+Serves as the local fail-safe heuristic engine if GLM times out (>3.5s) or fails.
 """
 
 from typing import List, Tuple, Optional

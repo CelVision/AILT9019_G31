@@ -59,11 +59,7 @@ def legal_columns(board: List[List[int]]) -> List[int]:
 
 
 def safe_legal_column(board: List[List[int]]) -> int | None:
-    """Temporary GLM-outage move: first legal column center-out.
-
-    This is intentionally not Minimax. It keeps the room playable while GLM is
-    being validated; WP3-7 replaces it with the real fallback.
-    """
+    """Return a deterministic legal center-out move for last-resort recovery."""
     legal = legal_columns(board)
     return legal[0] if legal else None
 

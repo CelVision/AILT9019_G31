@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 — Local acceptance hardening
+
+- Added server-side registration, move, and reaction validation with explicit WebSocket error frames.
+- Added authoritative queue status events, server-enforced 30-second turn timeouts, and short-lived PvP/PvE rematch handling.
+- Wired the deterministic Minimax bot as the GLM failure fallback and updated the client/docs to describe GLM consistently.
+- Added pointer input support for touch devices and protocol regression tests.
+- Local verification: 75 automated tests, deployment checker, PvP/rematch WebSocket flow, and PvE Minimax fallback.
+
 ## 2026-10-23 — Deployment implementation
 
 Branch: `deploy_XIANG-HANCHENG`. Contribution area: XIANG HANCHENG, deployment and distribution. Based on main commit `3726563`.

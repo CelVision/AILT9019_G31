@@ -7,38 +7,41 @@ import json
 import os
 import time
 import uuid
-from typing import Dict, List, Optional
+from datetime import date
+from typing import Dict, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_ai_settings
 from app.game_engine import ConnectFourEngine
-from app.matchmaking import MatchmakingQueue, QueueEntry, QueueRejected
+from app.matchmaking import MatchmakingQueue, QueueEntry
 from app.ai.glm_client import GLMError, request_glm_move, safe_legal_column
 from app.ai.minimax_fallback import get_minimax_move
 
 
 app = FastAPI(title="ConnectFour Connect")
 
-# In-memory Matching Queue (pairing rules live in app/matchmaking.py).
-matchmaking = MatchmakingQueue()
+CURRENT_YEAR = date.today().year
+MIN_BIRTH_YEAR = 1920
+MIN_NICKNAME_LENGTH = 2
+MAX_NICKNAME_LENGTH = 16
+QUEUE_TIMEOUT_SECONDS = 15
+TURN_DURATION_SECONDS = 30
 
-# How often a waiting player receives a queue_status heartbeat.
-QUEUE_HEARTBEAT_SECONDS = 1.0
-
-BOT_NICKNAME = "AI Coach"
-
-# Local reply must land well inside a human turn; Minimax depth 4 measures ~24 ms.
-FALLBACK_BUDGET_SECONDS = 0.25
-
-
-def current_year() -> int:
-    """Server-side clock used for the age check; tests override this."""
-    return time.localtime().tm_year
+# In-memory Matching Queue
+# Queue entry: {"ws": WebSocket, "session_id": str, "nickname": str, "birth_year": int, "age": int, "queued_at": float}
+matching_pool: List[Dict] = []
+# Public queue object retained for the queue contract and direct test access.
+# The gateway mirrors its live rows into ``matching_pool`` because room code
+# needs the richer registration record (including birth year).
+matchmaking = MatchmakingQueue(timeout_seconds=QUEUE_TIMEOUT_SECONDS)
 
 # Active Game Rooms
 # room_id -> Room Data
 active_rooms: Dict[str, Dict] = {}
+# Finished rooms are retained briefly so both PvP players can request a
+# rematch without entering the general matchmaking queue again.
+finished_rooms: Dict[str, Dict] = {}
 
 
 class ConnectionManager:
@@ -63,13 +66,124 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+def protocol_error(code: str, message: str, field: str | None = None) -> dict:
+    payload = {"code": code, "message": message}
+    if field:
+        payload["field"] = field
+    return payload
+
+
+def validate_registration(payload: dict) -> tuple[dict | None, dict | None]:
+    """Validate the public registration fields before queueing a player."""
+    nickname = payload.get("nickname")
+    if not isinstance(nickname, str):
+        return None, protocol_error("invalid_nickname", "Nickname must be 2–16 characters.", "nickname")
+    nickname = nickname.strip()
+    if not MIN_NICKNAME_LENGTH <= len(nickname) <= MAX_NICKNAME_LENGTH:
+        return None, protocol_error("invalid_nickname", "Nickname must be 2–16 characters.", "nickname")
+
+    birth_year = payload.get("birth_year")
+    if isinstance(birth_year, bool) or not isinstance(birth_year, int):
+        return None, protocol_error(
+            "invalid_birth_year",
+            "Birth year must be a whole number.",
+            "birth_year",
+        )
+    if not MIN_BIRTH_YEAR <= birth_year <= CURRENT_YEAR:
+        return None, protocol_error("invalid_birth_year", "That birth year is not plausible.", "birth_year")
+    age = CURRENT_YEAR - birth_year
+    if age < 18:
+        return None, protocol_error("underage", "Users must be 18+ to enter.", "birth_year")
+
+    return {
+        "nickname": nickname,
+        "birth_year": birth_year,
+        "age": age,
+    }, None
+
+
+def ages_compatible(age_a: int, age_b: int) -> bool:
+    return abs(age_a - age_b) <= 3
+
+
+def _player_dict(entry: dict | QueueEntry) -> dict:
+    """Accept queue dataclasses and gateway dictionaries at the room boundary."""
+    if isinstance(entry, QueueEntry):
+        return entry.as_player()
+    return entry
+
+
+def _queue_status(user: dict) -> dict:
+    status = matchmaking.status(user["session_id"])
+    if status is not None:
+        return {"status": "searching", **status}
+    elapsed = min(QUEUE_TIMEOUT_SECONDS, max(0, int(time.time() - user["queued_at"])))
+    return {
+        "status": "searching",
+        "elapsed_seconds": elapsed,
+        "timeout_seconds": QUEUE_TIMEOUT_SECONDS,
+        "remaining_seconds": max(0, QUEUE_TIMEOUT_SECONDS - elapsed),
+        "position": 1,
+        "waiting": 1,
+    }
+
+
+async def send_room_event(room: dict, msg_type: str, payload: dict) -> None:
+    """Send one event to every connected human in a room."""
+    await manager.send_json(room["p1"]["ws"], msg_type, payload)
+    if not room["is_pve"]:
+        await manager.send_json(room["p2"]["ws"], msg_type, payload)
+
+
+def remember_finished_room(room: dict) -> None:
+    finished_rooms[room["room_id"]] = {
+        "room_id": room["room_id"],
+        "is_pve": room["is_pve"],
+        "p1": room["p1"],
+        "p2": room["p2"],
+        "rematch_requests": set(),
+        "finished_at": time.time(),
+    }
+
+
+async def finish_room(room: dict, payload: dict) -> None:
+    """Notify players, remove live state, and retain a short rematch record."""
+    if active_rooms.get(room["room_id"]) is not room:
+        return
+    active_rooms.pop(room["room_id"], None)
+    room["ended"] = True
+    remember_finished_room(room)
+    await send_room_event(room, "game_over", payload)
+
+
+async def expire_turn(room: dict) -> None:
+    winner = 2 if room["current_turn"] == 1 else 1
+    await finish_room(
+        room,
+        {
+            "winner": winner,
+            "reason": "turn_timeout",
+            "timed_out_player": room["current_turn"],
+        },
+    )
+
+
+def find_room_for_session(session_id: str) -> tuple[str | None, dict | None]:
+    for room_id, room in active_rooms.items():
+        if room["p1"]["session_id"] == session_id:
+            return room_id, room
+        if not room["is_pve"] and room["p2"]["session_id"] == session_id:
+            return room_id, room
+    return None, None
+
+
 @app.get("/api/health")
 async def health_check():
     ai = get_ai_settings()
     return {
         "status": "healthy",
         "active_rooms": len(active_rooms),
-        "queued_users": len(matchmaking),
+        "queued_users": len(matching_pool),
         # Never return the key. These two fields are safe for operators.
         "llm_enabled": ai.enabled,
         "llm_model": ai.default_model,
@@ -78,88 +192,129 @@ async def health_check():
 
 # Matchmaking Background Task
 async def matchmaking_worker():
-    """Pair compatible players and expire stale queue entries every 500 ms."""
     while True:
         try:
-            pairs, expired = matchmaking.tick()
-            for user_a, user_b in pairs:
-                asyncio.create_task(create_pvp_match(user_a, user_b))
-            for user in expired:
-                asyncio.create_task(create_pve_match(user))
+            now = time.time()
+            matched_indices = set()
+
+            # Publish authoritative queue progress once per second. The
+            # browser may render a local countdown, but this keeps it in sync
+            # with the server's actual queue clock.
+            for user in list(matching_pool):
+                if now - user.get("last_status_at", 0) >= 1.0:
+                    await manager.send_json(user["ws"], "queue_status", _queue_status(user))
+                    user["last_status_at"] = now
+
+            # 1. Check for compatible human pairs (|ΔAge| <= 3)
+            for i in range(len(matching_pool)):
+                if i in matched_indices:
+                    continue
+                user_a = matching_pool[i]
+
+                for j in range(i + 1, len(matching_pool)):
+                    if j in matched_indices:
+                        continue
+                    user_b = matching_pool[j]
+
+                    if ages_compatible(user_a["age"], user_b["age"]):
+                        # Found compatible human pair!
+                        matched_indices.add(i)
+                        matched_indices.add(j)
+                        matchmaking.remove(user_a["session_id"])
+                        matchmaking.remove(user_b["session_id"])
+                        asyncio.create_task(create_pvp_match(user_a, user_b))
+                        break
+
+            # 2. Check for 15s queue timeouts -> Route to PvE
+            for k in range(len(matching_pool)):
+                if k in matched_indices:
+                    continue
+                user = matching_pool[k]
+                if now - user["queued_at"] >= QUEUE_TIMEOUT_SECONDS:
+                    matched_indices.add(k)
+                    matchmaking.remove(user["session_id"])
+                    asyncio.create_task(create_pve_match(user))
+
+            # Remove matched or timed-out users from pool
+            if matched_indices:
+                remaining = [
+                    matching_pool[idx]
+                    for idx in range(len(matching_pool))
+                    if idx not in matched_indices
+                ]
+                matching_pool.clear()
+                matching_pool.extend(remaining)
+
+            # Enforce the turn deadline on the server. A client-side timer is
+            # only a visual aid and cannot be trusted to end a stalled turn.
+            for room in list(active_rooms.values()):
+                if now - room["turn_start"] >= TURN_DURATION_SECONDS:
+                    await expire_turn(room)
+
+            # Avoid retaining completed room metadata forever.
+            for room_id, room in list(finished_rooms.items()):
+                if now - room["finished_at"] >= 300:
+                    finished_rooms.pop(room_id, None)
+
         except Exception as e:
             print("Matchmaking error:", e)
 
         await asyncio.sleep(0.5)
 
 
-async def queue_heartbeat():
-    """Push queue_status to every waiting player so the countdown is server-owned."""
-    while True:
-        await asyncio.sleep(QUEUE_HEARTBEAT_SECONDS)
-        try:
-            for entry in matchmaking.entries():
-                status = matchmaking.status(entry.session_id)
-                if status is not None:
-                    await manager.send_json(entry.ws, "queue_status", status)
-        except Exception as e:
-            print("Queue heartbeat error:", e)
-
-
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(matchmaking_worker())
-    asyncio.create_task(queue_heartbeat())
 
 
-async def create_pvp_match(user_a: QueueEntry, user_b: QueueEntry):
+async def create_pvp_match(user_a: dict | QueueEntry, user_b: dict | QueueEntry):
+    user_a = _player_dict(user_a)
+    user_b = _player_dict(user_b)
     room_id = f"rm_{uuid.uuid4().hex[:8]}"
     engine = ConnectFourEngine()
-
-    p1 = user_a.as_player()
-    p2 = user_b.as_player()
 
     room = {
         "room_id": room_id,
         "is_pve": False,
         "engine": engine,
-        "p1": p1,
-        "p2": p2,
+        "p1": user_a,
+        "p2": user_b,
         "current_turn": 1,
-        "turn_start": time.time()
+        "turn_start": time.time(),
     }
     active_rooms[room_id] = room
 
     # Notify Player 1
-    await manager.send_json(p1["ws"], "match_found", {
+    await manager.send_json(user_a["ws"], "match_found", {
         "room_id": room_id,
         "is_pve": False,
         "assigned_player": 1,
-        "opponent_nickname": p2["nickname"],
-        "opponent_age": p2["age"],
-        "turn_duration_seconds": 30
+        "opponent_nickname": user_b["nickname"],
+        "opponent_age": user_b["age"],
+        "turn_duration_seconds": TURN_DURATION_SECONDS
     })
 
     # Notify Player 2
-    await manager.send_json(p2["ws"], "match_found", {
+    await manager.send_json(user_b["ws"], "match_found", {
         "room_id": room_id,
         "is_pve": False,
         "assigned_player": 2,
-        "opponent_nickname": p1["nickname"],
-        "opponent_age": p1["age"],
-        "turn_duration_seconds": 30
+        "opponent_nickname": user_a["nickname"],
+        "opponent_age": user_a["age"],
+        "turn_duration_seconds": TURN_DURATION_SECONDS
     })
 
 
-async def create_pve_match(user: QueueEntry):
+async def create_pve_match(user: dict | QueueEntry):
+    user = _player_dict(user)
     room_id = f"rm_{uuid.uuid4().hex[:8]}"
     engine = ConnectFourEngine()
 
-    human = user.as_player()
     bot_user = {
         "ws": None,
         "session_id": "bot",
-        "nickname": BOT_NICKNAME,
-        "age": human["age"],
+        "nickname": "GLM Bot",
+        "age": user["age"],
         "is_bot": True
     }
 
@@ -167,20 +322,20 @@ async def create_pve_match(user: QueueEntry):
         "room_id": room_id,
         "is_pve": True,
         "engine": engine,
-        "p1": human,
+        "p1": user,
         "p2": bot_user,
         "current_turn": 1,
-        "turn_start": time.time()
+        "turn_start": time.time(),
     }
     active_rooms[room_id] = room
 
-    await manager.send_json(human["ws"], "match_found", {
+    await manager.send_json(user["ws"], "match_found", {
         "room_id": room_id,
         "is_pve": True,
         "assigned_player": 1,
-        "opponent_nickname": BOT_NICKNAME,
-        "opponent_age": human["age"],
-        "turn_duration_seconds": 30
+        "opponent_nickname": "GLM Bot",
+        "opponent_age": user["age"],
+        "turn_duration_seconds": TURN_DURATION_SECONDS
     })
 
 
@@ -188,39 +343,70 @@ async def create_pve_match(user: QueueEntry):
 async def websocket_endpoint(websocket: WebSocket):
     session_id = uuid.uuid4().hex
     await manager.connect(session_id, websocket)
-    current_room_id: Optional[str] = None
 
     try:
         while True:
             data = await websocket.receive_text()
-            message = json.loads(data)
+            try:
+                message = json.loads(data)
+            except (TypeError, json.JSONDecodeError):
+                await manager.send_json(
+                    websocket,
+                    "error",
+                    protocol_error("invalid_json", "Message must be valid JSON."),
+                )
+                continue
+
+            if not isinstance(message, dict):
+                await manager.send_json(
+                    websocket,
+                    "error",
+                    protocol_error("invalid_message", "Message must be a JSON object."),
+                )
+                continue
             msg_type = message.get("type")
             payload = message.get("payload", {})
+            if not isinstance(payload, dict):
+                await manager.send_json(
+                    websocket,
+                    "error",
+                    protocol_error("invalid_payload", "Payload must be a JSON object."),
+                )
+                continue
 
             if msg_type == "queue_join":
-                try:
-                    entry = matchmaking.build_entry(
-                        payload, session_id=session_id, ws=websocket, current_year=current_year()
-                    )
-                    matchmaking.add(entry)
-                except QueueRejected as exc:
-                    await manager.send_json(websocket, "error", exc.as_payload())
-                else:
-                    await manager.send_json(websocket, "queue_status",
-                                            matchmaking.status(session_id))
+                registration, error = validate_registration(payload)
+                if error:
+                    await manager.send_json(websocket, "error", error)
+                    continue
 
-            elif msg_type == "queue_left":
+                # A browser can retry after a reconnect; do not enqueue the
+                # same socket twice.
+                matching_pool[:] = [
+                    user for user in matching_pool if user["session_id"] != session_id
+                ]
                 matchmaking.remove(session_id)
-                await manager.send_json(websocket, "queue_left", {"status": "left"})
+                user = {
+                    "ws": websocket,
+                    "session_id": session_id,
+                    **registration,
+                    "queued_at": time.time(),
+                    "last_status_at": 0.0,
+                }
+                matching_pool.append(user)
+                matchmaking.add(QueueEntry(
+                    session_id=session_id,
+                    nickname=registration["nickname"],
+                    birth_year=registration["birth_year"],
+                    age=registration["age"],
+                    ws=websocket,
+                    queued_at=user["queued_at"],
+                ))
+                await manager.send_json(websocket, "queue_status", _queue_status(user))
 
             elif msg_type == "player_move":
                 # Find player's room
-                room = None
-                for rid, r in active_rooms.items():
-                    if r["p1"]["session_id"] == session_id or (not r["is_pve"] and r["p2"]["session_id"] == session_id):
-                        room = r
-                        current_room_id = rid
-                        break
+                room_id, room = find_room_for_session(session_id)
 
                 if not room:
                     continue
@@ -231,8 +417,19 @@ async def websocket_endpoint(websocket: WebSocket):
                 if room["current_turn"] != player_num:
                     continue
 
+                if time.time() - room["turn_start"] >= TURN_DURATION_SECONDS:
+                    await expire_turn(room)
+                    continue
+
                 col = payload.get("column")
-                if col is not None and engine.is_legal_move(col):
+                if isinstance(col, bool) or not isinstance(col, int):
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("invalid_column", "Column must be an integer from 0 to 6.", "column"),
+                    )
+                    continue
+                if engine.is_legal_move(col):
                     success, row = engine.drop_token(col, player_num)
                     if success:
                         is_win, win_coords = engine.check_win(row, col)
@@ -240,6 +437,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                         # Broadcast board update
                         room["current_turn"] = 2 if player_num == 1 else 1
+                        room["turn_start"] = time.time()
                         update_payload = {
                             "board": engine.get_board(),
                             "last_move": {"player": player_num, "row": row, "column": col},
@@ -255,27 +453,40 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "reason": "connect4",
                                 "winning_coordinates": win_coords
                             }
-                            await manager.send_json(room["p1"]["ws"], "game_over", game_over_payload)
-                            if not room["is_pve"]:
-                                await manager.send_json(room["p2"]["ws"], "game_over", game_over_payload)
-                            del active_rooms[room["room_id"]]
+                            await finish_room(room, game_over_payload)
                             continue
 
                         elif is_draw:
                             game_over_payload = {"winner": 0, "reason": "draw"}
-                            await manager.send_json(room["p1"]["ws"], "game_over", game_over_payload)
-                            if not room["is_pve"]:
-                                await manager.send_json(room["p2"]["ws"], "game_over", game_over_payload)
-                            del active_rooms[room["room_id"]]
+                            await finish_room(room, game_over_payload)
                             continue
 
                         # If PvE, trigger AI move
                         if room["is_pve"] and room["current_turn"] == 2:
                             asyncio.create_task(handle_ai_turn(room))
 
+                else:
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("illegal_column", "That column is full or outside the board.", "column"),
+                    )
+
             elif msg_type == "send_reaction":
                 category = payload.get("category")
                 reaction_id = payload.get("id")
+                valid_range = (
+                    category == "phrase" and isinstance(reaction_id, int) and not isinstance(reaction_id, bool) and 1 <= reaction_id <= 6
+                ) or (
+                    category == "sticker" and isinstance(reaction_id, int) and not isinstance(reaction_id, bool) and 1 <= reaction_id <= 4
+                )
+                if not valid_range:
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("invalid_reaction", "Choose one of the available phrases or stickers."),
+                    )
+                    continue
 
                 for rid, r in active_rooms.items():
                     if r["p1"]["session_id"] == session_id or (not r["is_pve"] and r["p2"]["session_id"] == session_id):
@@ -292,42 +503,57 @@ async def websocket_endpoint(websocket: WebSocket):
                             await manager.send_json(r["p1"]["ws"], "broadcast_reaction", reaction_payload)
                         break
 
+            elif msg_type == "rematch_request":
+                finished = next(
+                    (
+                        room for room in finished_rooms.values()
+                        if room["p1"]["session_id"] == session_id
+                        or (not room["is_pve"] and room["p2"]["session_id"] == session_id)
+                    ),
+                    None,
+                )
+                if not finished:
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("rematch_unavailable", "This match is no longer available for rematch."),
+                    )
+                    continue
+
+                if finished["is_pve"]:
+                    finished_rooms.pop(finished["room_id"], None)
+                    await create_pve_match(finished["p1"])
+                else:
+                    finished["rematch_requests"].add(session_id)
+                    if len(finished["rematch_requests"]) == 2:
+                        finished_rooms.pop(finished["room_id"], None)
+                        await create_pvp_match(finished["p1"], finished["p2"])
+                    else:
+                        await manager.send_json(websocket, "rematch_waiting", {
+                            "message": "Waiting for your opponent to accept the rematch."
+                        })
+
     except WebSocketDisconnect:
         manager.disconnect(session_id)
         # Remove from queue if present
+        matching_pool[:] = [u for u in matching_pool if u["session_id"] != session_id]
         matchmaking.remove(session_id)
 
-        # Handle active room disconnect
-        if current_room_id and current_room_id in active_rooms:
-            room = active_rooms.pop(current_room_id, None)
-            if room and not room["is_pve"]:
-                other_user = room["p2"] if room["p1"]["session_id"] == session_id else room["p1"]
-                await manager.send_json(other_user["ws"], "game_over", {
-                    "winner": 2 if room["p1"]["session_id"] == session_id else 1,
-                    "reason": "opponent_disconnected"
-                })
-
-
-def choose_fallback_move(board: list, budget_seconds: float = FALLBACK_BUDGET_SECONDS):
-    """Local reply when the LLM is unavailable (WP3-7).
-
-    Minimax runs first and is validated against the live board; if it raises or
-    returns an unplayable column, a centre-out legal move is used instead so a
-    room can never stall. Returns (column, strategy); column is None only when
-    the board is full.
-    """
-    try:
-        column = get_minimax_move(board, depth=4, bot_piece=2)
-        if isinstance(column, int) and 0 <= column < 7 and board[0][column] == 0:
-            return column, "minimax"
-    except Exception:
-        pass
-    return safe_legal_column(board), "safe_move"
+        # Handle active room disconnect. Look it up by session so a rematch
+        # created before the socket closes is cleaned up correctly as well.
+        _, room = find_room_for_session(session_id)
+        if room:
+            await finish_room(room, {
+                "winner": 2 if room["p1"]["session_id"] == session_id else 1,
+                "reason": "opponent_disconnected",
+            })
 
 
 async def handle_ai_turn(room: dict):
-    """Execute a GLM PvE move; fall back to Minimax when GLM is unavailable."""
+    """Execute a GLM PvE move and fall back to the local Minimax bot."""
     await asyncio.sleep(0.4)  # Natural human-like pause
+    if room.get("ended"):
+        return
     engine = room["engine"]
     settings = get_ai_settings()
 
@@ -348,21 +574,23 @@ async def handle_ai_turn(room: dict):
     except Exception:
         fallback_reason = "unexpected_error"
 
+    if room.get("ended") or (
+        room["room_id"] in active_rooms and active_rooms[room["room_id"]] is not room
+    ):
+        return
+
     if ai_col is None:
         ai_col, strategy = choose_fallback_move(engine.get_board())
         if fallback_reason and not room.get("fallback_notified"):
             room["fallback_notified"] = True
             await manager.send_json(room["p1"]["ws"], "pve_fallback_notice", {
-                "message": f"AI opponent operating in local fallback mode ({fallback_reason}).",
+                "message": f"GLM unavailable ({fallback_reason}); fallback to the local {strategy} bot.",
                 "reason": fallback_reason,
                 "strategy": strategy,
             })
 
     if ai_col is None:
-        await manager.send_json(room["p1"]["ws"], "game_over", {
-            "winner": 0, "reason": "draw"
-        })
-        active_rooms.pop(room["room_id"], None)
+        await finish_room(room, {"winner": 0, "reason": "draw"})
         return
 
     success, row = engine.drop_token(ai_col, player=2)
@@ -371,10 +599,7 @@ async def handle_ai_turn(room: dict):
         # Defensive: the board changed between validation and drop.
         safe_col = safe_legal_column(engine.get_board())
         if safe_col is None:
-            await manager.send_json(room["p1"]["ws"], "game_over", {
-                "winner": 0, "reason": "draw"
-            })
-            active_rooms.pop(room["room_id"], None)
+            await finish_room(room, {"winner": 0, "reason": "draw"})
             return
         ai_col = safe_col
         glm_move = None  # The GLM move was not applied; do not send its reaction.
@@ -386,6 +611,7 @@ async def handle_ai_turn(room: dict):
     is_draw = engine.is_draw()
 
     room["current_turn"] = 1
+    room["turn_start"] = time.time()
     update_payload = {
         "board": engine.get_board(),
         "last_move": {"player": 2, "row": row, "column": ai_col},
@@ -404,15 +630,22 @@ async def handle_ai_turn(room: dict):
         await manager.send_json(room["p1"]["ws"], "broadcast_reaction", {
             "from_player": 2, "category": "phrase", "id": 5  # "Well played!"
         })
-        await manager.send_json(room["p1"]["ws"], "game_over", {
+        await finish_room(room, {
             "winner": 2, "reason": "connect4", "winning_coordinates": win_coords
         })
-        active_rooms.pop(room["room_id"], None)
     elif is_draw:
-        await manager.send_json(room["p1"]["ws"], "game_over", {
-            "winner": 0, "reason": "draw"
-        })
-        active_rooms.pop(room["room_id"], None)
+        await finish_room(room, {"winner": 0, "reason": "draw"})
+
+
+def choose_fallback_move(board: list, budget_seconds: float = 0.25):
+    """Return a validated Minimax move, degrading to a legal centre-out move."""
+    try:
+        column = get_minimax_move(board, depth=4, bot_piece=2)
+        if isinstance(column, int) and not isinstance(column, bool) and 0 <= column < 7 and board[0][column] == 0:
+            return column, "minimax"
+    except Exception:
+        pass
+    return safe_legal_column(board), "safe_move"
 
 
 # Serve the client SPA from the site root so index.html's relative asset paths
