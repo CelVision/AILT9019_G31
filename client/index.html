@@ -32,10 +32,19 @@
   <main class="main-container">
 
     <!-- Active Match Dashboard -->
+    <!-- Active Match Dashboard -->
     <section id="matchSection" class="match-section hidden">
       <div class="game-layout">
-        <!-- Main Game Board Column -->
-        <div class="game-main-area">
+        <!-- Main Game Board Column: Game Area -->
+        <div id="gameArea" class="game-area">
+          <div class="area-header">
+            <div class="area-title-group">
+              <span class="area-badge game-badge-area">🎮 Game Area</span>
+              <span id="gameArenaStatus" class="area-subtitle">Connect 4 in a row</span>
+            </div>
+            <div id="turnIndicator" class="turn-indicator">Your Turn</div>
+          </div>
+
           <!-- Players Bar -->
           <div class="players-bar">
             <!-- Player 1 (You) -->
@@ -50,7 +59,6 @@
 
             <!-- Center Match Info & Turn Timer -->
             <div class="match-info">
-              <div id="turnIndicator" class="turn-indicator">Your Turn</div>
               <div class="timer-container">
                 <div id="timerBar" class="timer-bar" style="width: 100%;"></div>
               </div>
@@ -65,6 +73,31 @@
                 <span id="player2Role" class="player-meta">Waiting...</span>
               </div>
               <div id="p2SpeechBubble" class="speech-bubble hidden"></div>
+            </div>
+          </div>
+
+          <!-- Post-Match Result Banner (Inside Game Area: Chat remains 100% accessible!) -->
+          <div id="resultModal" class="result-banner-card hidden">
+            <div class="result-header">
+              <span id="resultIcon" class="result-icon">🏆</span>
+              <div class="result-text-group">
+                <h3 id="resultTitle" class="result-title">Victory!</h3>
+                <p id="resultSubtitle" class="result-subtitle">You connected 4 tokens!</p>
+              </div>
+            </div>
+            <div class="result-stats">
+              <div class="stat-box">
+                <span class="stat-value" id="statTurns">18</span>
+                <span class="stat-label">Turns</span>
+              </div>
+              <div class="stat-box">
+                <span class="stat-value" id="statDuration">2m 14s</span>
+                <span class="stat-label">Duration</span>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button id="btnRematch" class="btn btn-primary">Request Rematch</button>
+              <button id="btnReturnLobby" class="btn btn-secondary">Back to Lobby</button>
             </div>
           </div>
 
@@ -98,18 +131,17 @@
           </div>
         </div>
 
-        <!-- Right Column: Match Sidebar -->
-        <aside class="game-sidebar">
-          <div class="sidebar-header">
-            <div class="sidebar-title-row">
-              <span class="sidebar-icon">💬</span>
-              <span class="sidebar-title">Match Hub</span>
-              <span id="chatBadge" class="chat-badge pve">AI Companion</span>
+        <!-- Right Column: Chat Area -->
+        <aside id="chatArea" class="chat-area">
+          <div class="area-header">
+            <div class="area-title-group">
+              <span class="area-badge chat-badge-area">💬 Chat Area</span>
+              <span class="area-subtitle">Pre & Post-Match Banter</span>
             </div>
-            <span class="sidebar-subtitle">Daily Icebreakers & Peer Banter</span>
+            <span id="chatBadge" class="chat-badge pve">AI Companion</span>
           </div>
 
-          <!-- Daily Topics Icebreaker Row in Sidebar -->
+          <!-- Daily Topics Icebreaker Row in Chat Area -->
           <div class="icebreaker-section">
             <div class="icebreaker-header">
               <span class="tray-label">☕ Campus Icebreakers</span>
@@ -123,7 +155,7 @@
             </div>
           </div>
 
-          <!-- Chat Box in Sidebar -->
+          <!-- Chat Box in Chat Area -->
           <div class="chat-box">
             <div id="chatMessageList" class="chat-message-list">
               <div class="chat-empty-hint">Tap a daily topic or say hello to start chatting!</div>
@@ -212,31 +244,6 @@
         </div>
         <span id="queueTimerText" class="queue-timer-text">15s remaining before AI opponent joins</span>
         <button id="btnCancelQueue" class="btn btn-secondary mt-4">Cancel</button>
-      </div>
-    </div>
-
-    <!-- Match Result Modal -->
-    <div id="resultModal" class="modal-overlay hidden">
-      <div class="modal-card modal-center">
-        <div id="resultIcon" class="result-icon">🏆</div>
-        <h2 id="resultTitle" class="result-title">Victory!</h2>
-        <p id="resultSubtitle" class="result-subtitle">You connected 4 tokens!</p>
-        
-        <div class="result-stats">
-          <div class="stat-box">
-            <span class="stat-value" id="statTurns">18</span>
-            <span class="stat-label">Turns</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-value" id="statDuration">2m 14s</span>
-            <span class="stat-label">Duration</span>
-          </div>
-        </div>
-
-        <div class="modal-actions">
-          <button id="btnRematch" class="btn btn-primary">Rematch</button>
-          <button id="btnReturnLobby" class="btn btn-secondary">Back to Lobby</button>
-        </div>
       </div>
     </div>
 

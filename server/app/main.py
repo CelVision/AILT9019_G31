@@ -144,6 +144,9 @@ def remember_finished_room(room: dict) -> None:
         "p2": room["p2"],
         "rematch_requests": set(),
         "finished_at": time.time(),
+        "chat_history": room.get("chat_history", []),
+        "last_chat_time": room.get("last_chat_time", {}),
+        "ended": True,
     }
 
 
@@ -175,6 +178,19 @@ def find_room_for_session(session_id: str) -> tuple[str | None, dict | None]:
             return room_id, room
         if not room["is_pve"] and room["p2"]["session_id"] == session_id:
             return room_id, room
+    return None, None
+
+
+def find_room_for_chat(session_id: str) -> tuple[str | None, dict | None]:
+    """Find an active or finished room so players can chat during and after match."""
+    room_id, room = find_room_for_session(session_id)
+    if room:
+        return room_id, room
+    for r_id, r in finished_rooms.items():
+        if r["p1"]["session_id"] == session_id:
+            return r_id, r
+        if not r["is_pve"] and r["p2"]["session_id"] == session_id:
+            return r_id, r
     return None, None
 
 
@@ -503,28 +519,27 @@ async def websocket_endpoint(websocket: WebSocket):
                     )
                     continue
 
-                for rid, r in active_rooms.items():
-                    if r["p1"]["session_id"] == session_id or (not r["is_pve"] and r["p2"]["session_id"] == session_id):
-                        sender_num = 1 if r["p1"]["session_id"] == session_id else 2
-                        reaction_payload = {
-                            "from_player": sender_num,
-                            "category": category,
-                            "id": reaction_id
-                        }
-                        # Broadcast to opponent
-                        if sender_num == 1 and not r["is_pve"]:
-                            await manager.send_json(r["p2"]["ws"], "broadcast_reaction", reaction_payload)
-                        elif sender_num == 2:
-                            await manager.send_json(r["p1"]["ws"], "broadcast_reaction", reaction_payload)
-                        break
+                _, r = find_room_for_chat(session_id)
+                if r:
+                    sender_num = 1 if r["p1"]["session_id"] == session_id else 2
+                    reaction_payload = {
+                        "from_player": sender_num,
+                        "category": category,
+                        "id": reaction_id
+                    }
+                    # Broadcast to opponent
+                    if sender_num == 1 and not r["is_pve"]:
+                        await manager.send_json(r["p2"]["ws"], "broadcast_reaction", reaction_payload)
+                    elif sender_num == 2:
+                        await manager.send_json(r["p1"]["ws"], "broadcast_reaction", reaction_payload)
 
             elif msg_type == "chat_send":
-                _, room = find_room_for_session(session_id)
+                _, room = find_room_for_chat(session_id)
                 if not room:
                     await manager.send_json(
                         websocket,
                         "error",
-                        protocol_error("room_not_found", "No active game room found for chatting."),
+                        protocol_error("room_not_found", "No game room found for chatting."),
                     )
                     continue
 
@@ -647,23 +662,30 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 async def handle_ai_chat_turn(room: dict):
-    """Generate and broadcast an AI companion reply in PvE matches."""
+    """Generate and broadcast an AI companion reply in PvE matches (during or after match)."""
     await asyncio.sleep(0.5)
-    if room.get("ended") or room["room_id"] not in active_rooms:
+    r_id = room.get("room_id")
+    is_valid = (r_id in active_rooms and active_rooms[r_id] is room) or (
+        r_id in finished_rooms and finished_rooms[r_id] is room
+    )
+    if not is_valid:
         return
 
     history = room.get("chat_history", [])
     try:
         reply = await generate_chat_reply(history)
     except Exception:
-        reply = "I'm focusing on the board right now! Nice move!"
+        reply = "Good game! That was a really fun match!"
 
-    if room.get("ended") or room["room_id"] not in active_rooms:
+    is_valid = (r_id in active_rooms and active_rooms[r_id] is room) or (
+        r_id in finished_rooms and finished_rooms[r_id] is room
+    )
+    if not is_valid:
         return
 
     history.append({"role": "assistant", "content": reply})
-    if len(history) > 10:
-        room["chat_history"] = history[-10:]
+    if len(history) > 12:
+        room["chat_history"] = history[-12:]
 
     reply_payload = {
         "from_player": 2,

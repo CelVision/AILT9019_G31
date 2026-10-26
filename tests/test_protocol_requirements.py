@@ -106,3 +106,28 @@ def test_ai_chat_turn_generates_companion_reply(monkeypatch):
     assert len(room["chat_history"]) == 2
     assert room["chat_history"][1]["content"] == "I prefer tea in the morning!"
     main.active_rooms.clear()
+
+
+def test_ai_chat_turn_works_in_finished_room(monkeypatch):
+    async def fake_reply(history):
+        return "Good game! You played brilliantly!"
+
+    monkeypatch.setattr(main, "generate_chat_reply", fake_reply)
+    room = {
+        "room_id": "finished-chat-test",
+        "is_pve": True,
+        "engine": ConnectFourEngine(),
+        "p1": {"ws": None, "session_id": "human", "nickname": "Alex"},
+        "p2": {"ws": None, "session_id": "bot", "nickname": "AI Coach"},
+        "chat_history": [{"role": "user", "content": "GG!"}],
+        "ended": True,
+    }
+    main.active_rooms.clear()
+    main.finished_rooms.clear()
+    main.finished_rooms[room["room_id"]] = room
+
+    asyncio.run(main.handle_ai_chat_turn(room))
+
+    assert len(room["chat_history"]) == 2
+    assert "Good game" in room["chat_history"][1]["content"]
+    main.finished_rooms.clear()

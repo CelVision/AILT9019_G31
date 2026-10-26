@@ -631,18 +631,137 @@ body {
   width: 100%;
 }
 
-/* Main Playing Column */
-.game-main-area {
+/* Distinct Area Headers & Badges */
+.area-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.65rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.area-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.area-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+}
+
+.game-badge-area {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.chat-badge-area {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.area-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* In-Game Result Card (Inside Game Area, never blocks Chat Area) */
+.result-banner-card {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.result-icon {
+  font-size: 2.2rem;
+}
+
+.result-text-group h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.result-text-group p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0.15rem 0 0 0;
+}
+
+.result-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat-box {
+  flex: 1;
+  background: #0f172a;
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Main Playing Column: Game Area */
+.game-area {
   flex: 0 1 auto;
   max-width: 680px;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: rgba(19, 27, 46, 0.65);
+  border: 1px solid var(--border-color);
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
-/* Sidebar Column */
-.game-sidebar {
+/* Sidebar Column: Chat Area */
+.chat-area {
   flex: 0 0 380px;
   max-width: 380px;
   width: 100%;

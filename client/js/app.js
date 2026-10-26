@@ -148,15 +148,26 @@ document.addEventListener('DOMContentLoaded', () => {
     player2Name.textContent = myPlayerNum === 2 ? 'You (Yellow)' : `${payload.opponent_nickname} (Yellow)`;
     player2Role.textContent = payload.is_pve ? 'AI Bot (GLM)' : 'Peer';
 
+    resultModal.classList.add('hidden');
+    const arenaStatus = document.getElementById('gameArenaStatus');
+    if (arenaStatus) arenaStatus.textContent = 'Active Match';
+
     // Setup chat mode & daily topics
     isPveMatch = Boolean(payload.is_pve);
-    chatMessageList.innerHTML = '';
-    const emptyHint = document.createElement('div');
-    emptyHint.className = 'chat-empty-hint';
-    emptyHint.textContent = isPveMatch
-      ? 'Chat with AI Coach or tap any daily icebreaker card above!'
-      : 'Tap any Daily Campus Icebreaker topic above to share topics safely!';
-    chatMessageList.appendChild(emptyHint);
+    if (!chatMessageList.hasChildNodes() || chatMessageList.children.length <= 1) {
+      chatMessageList.innerHTML = '';
+      const emptyHint = document.createElement('div');
+      emptyHint.className = 'chat-empty-hint';
+      emptyHint.textContent = isPveMatch
+        ? 'Chat with AI Coach or tap any daily icebreaker card above!'
+        : 'Tap any Daily Campus Icebreaker topic above to share topics safely!';
+      chatMessageList.appendChild(emptyHint);
+    } else {
+      const divider = document.createElement('div');
+      divider.className = 'chat-empty-hint';
+      divider.textContent = '🎮 --- Match Started ---';
+      chatMessageList.appendChild(divider);
+    }
     chatTypingIndicator.classList.add('hidden');
 
     if (isPveMatch) {
@@ -197,10 +208,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (payload.winning_coordinates) {
       boardRenderer.setWinningCoords(payload.winning_coordinates);
     }
+    const arenaStatus = document.getElementById('gameArenaStatus');
+    if (arenaStatus) arenaStatus.textContent = 'Match Finished';
+
+    // Win or lose does NOT affect chat: keep chat fully active for post-match talk!
+    if (isPveMatch) {
+      chatInput.disabled = false;
+      chatInput.placeholder = 'Chat post-game (e.g. GG, rematch, tips)...';
+      btnSendChat.disabled = false;
+    }
 
     setTimeout(() => {
       showGameOverModal(payload);
-    }, 1200);
+    }, 600);
   });
 
   socketClient.on('pve_fallback_notice', (payload) => {
