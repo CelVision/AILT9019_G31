@@ -12,6 +12,35 @@
 
 ---
 
+## 2026-10-26 — Matchmaking extraction, server-side validation, Minimax fallback
+
+- **`server/app/matchmaking.py` (new):** the FIFO pool moved out of `main.py` into a `MatchmakingQueue` with an injectable clock: `add`/`remove`/`position`/`tick`/`status`, a three-year age window, the 15-second expiry, duplicate-join rejection and a 200-entry capacity limit. `tick()` pairs and expires in one pass and returns both lists, so pairing and expiry can no longer race each other.
+- **`queue_join` is now validated server-side (QW-4):** nickname type/length (2–16), birth year type and plausibility, and the adult gate. Rejections return `{"type": "error", "payload": {code, message, field}}` instead of being silently dropped; accepted joins return an immediate `queue_status`.
+- **`queue_status` heartbeat (QW-5):** a second background task pushes `elapsed_seconds` / `remaining_seconds` / `position` / `waiting` to every waiting player once per second. The browser no longer owns the queue countdown — `client/js/app.js` renders the server frame and sends `queue_join` from the `connected` handler instead of a one-second client timer.
+- **Minimax restored (WP3-7):** `choose_fallback_move()` plays Minimax (depth 4) when GLM fails, validates the returned column against the live board, and degrades to a centre-out legal move only if Minimax raises or returns an unplayable column. `pve_fallback_notice` now carries `reason` and `strategy`.
+- **Test Suite A (WP5-1) and Test Suite B (WP5-2) are in the repo:** 20 age/gap/malformed cases plus WebSocket-level rejection tests, and 10 fault injections (2× HTTP failure, 2× 429, 2× timeout, 4× malformed/illegal reply) with a must-block Minimax case and a GLM-success control. Suite B is no longer blocked.
+- **Bug found and fixed while writing the tests:** `create_pvp_match` put the raw `QueueEntry` into `room["p2"]`, so the first PvP broadcast raised `TypeError: 'QueueEntry' object is not subscriptable`. Rooms now hold plain player dicts; `test_pvp_match_room_uses_plain_player_dicts` guards it.
+- **Verification:** `python -m pytest tests/ -q` → **83 passed**. Live server (Uvicorn, `llm_enabled=false`): `deploy/check_public_url.py` → 8/8 checks; scripted WebSocket run → 7/7 (underage rejected, join returns `queue_status`, two compatible adults paired into one room, move broadcast to both, heartbeat remaining time strictly decreasing, position reported). A lone player was routed to PvE at **15.3 s** with bot nickname `AI Coach`.
+- **Known limits:** the browser UI was syntax-checked (`node --check`) but not clicked through; the 30-second turn timer is still not enforced server-side (a forfeit rule is not implemented); `matchmaking_worker` still prints exceptions to stdout rather than logging them; `room_manager.py` extraction (WP2-3) is untouched; the PDF in `docs/proposal/` is still the pre-additions export.
+
+## 2026-10-26 — Proposal additions (§2.3, §3.3, §4.3)
+
+- Inserted three subsections into `docs/proposal/AILT9019_Revised_Proposal_G31.md` and the matching `.docx`: **§2.3** matchmaking state machine, disconnect handling and capacity limits; **§3.3** a quantitative latency, load and soak benchmark protocol; **§4.3** accessibility commitments under WCAG 2.1 AA.
+- Scope was held deliberately narrow: these are the three parts of the template the submitted draft answers least. No existing section was rewritten, and no other prose was moved, so the added text can be reviewed or reverted block by block.
+- **Known inconsistency left untouched:** §2 still names Gemini 1.5 Flash with a 2.5 s deadline while the code runs GLM-4.5-Air at 3.5 s; the Minimax fallback is still unwired; `create_pve_match` still labels the bot `"Gemini Bot"`. The PDF under `docs/proposal/` has **not** been regenerated from the updated `.docx`.
+- **Commitments, not shipped behaviour:** the §2.3 claims about a `queue_status` heartbeat, a queue cap with `queue_full`, and server-side turn forfeit describe intended design. The queue tick currently matches, expires to PvE and emits `opponent_disconnected`. `queue_status` (QW-5) and the queue cap are implemented in the follow-up matchmaking PR.
+
+## 2026-10-26 — Deployment PR #2 review (`c29d8e7`)
+
+- Pulled and reviewed the merged deployment contribution: Dockerfile, Dockerfile-specific build-context ignore, Compose service, endpoint checker, checker regression tests, hardened systemd unit, README rewrite, and deployment notes.
+- **Verified locally:** `python -m pytest tests/ -q` → **42 passed** (2 existing FastAPI deprecation warnings). `python deploy/check_public_url.py http://127.0.0.1:8000` passed all 8 checks against a locally started Uvicorn server. `compileall`, `git diff --check`, and local documentation-link checks passed.
+- **No blocking implementation defects found** in the checker or Compose/systemd definitions reviewed statically. The Dockerfile-specific ignore file correctly limits the context to `server/app`, `server/requirements.txt`, and `client`; secrets are not copied into the image.
+- **Still unverified:** Docker is not installed on this workstation, so the image was not built. Nginx/systemd/VPS/DNS/TLS/public-URL acceptance remains open (WP4-2 through WP4-4). The PR is deployment configuration, not a live deployment.
+- **Documentation blocker:** `docs/TECHNICAL_SPEC.md` and `docs/PROJECT_PLAN.md` still describe **Gemini 1.5 Flash** with a **1.5s** budget, while the README/code now use **GLM-4.5-Air** with a **3.5s** budget. Update these formal documents before the checkpoint report.
+- **Minor notes:** the deployment changelog reports 3 deprecation warnings (2 observed here); the Dockerfile-specific ignore depends on BuildKit for the strongest build-context exclusion; the new local README command omits `--reload` for development.
+
+---
+
 ## 2026-10-23 — XIANG HANCHENG deployment implementation
 
 - **Branch:** `deploy_XIANG-HANCHENG`, based on `3726563`. The old deployment PR #1 is closed; this work uses the team member's existing branch.

@@ -48,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let turnInterval = null;
   let matchStartTime = null;
   let totalTurns = 0;
+  let pendingJoin = null;
+  let isQueued = false;
 
   // Initialize Socket Client
   const socketClient = new GameSocketClient();
@@ -69,6 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
   socketClient.on('connected', () => {
     connectionStatus.className = 'status-pill status-connected';
     connectionStatus.querySelector('.status-label').textContent = 'Connected';
+    // Send the join as soon as the socket is open; the server owns the queue.
+    if (pendingJoin) {
+      socketClient.send('queue_join', pendingJoin);
+      pendingJoin = null;
+    }
   });
 
   socketClient.on('disconnected', () => {
@@ -77,7 +84,36 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Protocol Events
+  socketClient.on('queue_status', (payload) => {
+    if (!payload || !isQueued) return;
+    const total = payload.timeout_seconds || 15;
+    const elapsed = payload.elapsed_seconds || 0;
+    const pct = Math.min(100, (elapsed / total) * 100);
+    const remaining = Math.max(0, Math.ceil(payload.remaining_seconds || 0));
+    queueProgress.style.width = `${pct}%`;
+    queueTimerText.textContent = payload.waiting > 1
+      ? `${remaining}s until an AI opponent joins · ${payload.waiting} waiting`
+      : `${remaining}s until an AI opponent joins`;
+  });
+
+  socketClient.on('error', (payload) => {
+    // Socket-level failures pass a DOM Event; queue rejections pass {code, message}.
+    if (!payload || !payload.code) return;
+    isQueued = false;
+    clearInterval(queueInterval);
+    queueModal.classList.add('hidden');
+    onboardingModal.classList.remove('hidden');
+    formError.textContent = payload.message || 'Something went wrong. Please try again.';
+    formError.classList.remove('hidden');
+    socketClient.disconnect();
+  });
+
+  socketClient.on('queue_left', () => {
+    isQueued = false;
+  });
+
   socketClient.on('match_found', (payload) => {
+    isQueued = false;
     // Hide modals
     clearInterval(queueInterval);
     queueModal.classList.add('hidden');
@@ -177,35 +213,25 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Connect to WebSocket and enter queue
+    // Connect to WebSocket; queue_join fires from the 'connected' handler.
+    pendingJoin = { nickname, birth_year: birthYear };
+    showQueueModal();
     socketClient.connect();
-    showQueueModal(nickname, birthYear);
   });
 
-  function showQueueModal(nickname, birthYear) {
+  function showQueueModal() {
     onboardingModal.classList.add('hidden');
     queueModal.classList.remove('hidden');
-
-    let secondsElapsed = 0;
-    const maxSeconds = 15;
+    isQueued = true;
     queueProgress.style.width = '0%';
-    queueTimerText.textContent = `${maxSeconds}s remaining before AI opponent joins`;
-
-    queueInterval = setInterval(() => {
-      secondsElapsed++;
-      const pct = (secondsElapsed / maxSeconds) * 100;
-      queueProgress.style.width = `${pct}%`;
-      const remaining = Math.max(0, maxSeconds - secondsElapsed);
-      queueTimerText.textContent = `${remaining}s remaining before AI opponent joins`;
-
-      if (secondsElapsed === 1) {
-        socketClient.send('queue_join', { nickname, birth_year: birthYear });
-      }
-    }, 1000);
+    queueTimerText.textContent = 'Joining the queue…';
   }
 
   btnCancelQueue.addEventListener('click', () => {
     clearInterval(queueInterval);
+    isQueued = false;
+    if (pendingJoin) pendingJoin = null;
+    socketClient.send('queue_left', {});
     queueModal.classList.add('hidden');
     onboardingModal.classList.remove('hidden');
     socketClient.disconnect();
