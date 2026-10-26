@@ -52,6 +52,7 @@ Traditional digital social platforms place heavy burdens on appearance swiping, 
 | **Should-Have** | Dual AI Personalities | "Casual Explorer" vs. "Tactical Challenger" |
 | **Should-Have** | Post-Match Mutual Rematch | Rematch handshake without re-entering queue |
 | **Should-Have** | Token-drop Physics & Audio FX | Micro-animations and crisp acoustic token drop sounds |
+| **Should-Have** | PvE AI Chat & Daily Conversation Bar | Interactive LLM banter in PvE + curated daily icebreaker prompts in PvP |
 
 ---
 

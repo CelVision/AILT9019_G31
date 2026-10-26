@@ -41,6 +41,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const fallbackToast = document.getElementById('fallbackToast');
   const toastMessage = document.getElementById('toastMessage');
 
+  const chatBadge = document.getElementById('chatBadge');
+  const chatMessageList = document.getElementById('chatMessageList');
+  const chatTypingIndicator = document.getElementById('chatTypingIndicator');
+  const chatForm = document.getElementById('chatForm');
+  const chatInput = document.getElementById('chatInput');
+  const btnSendChat = document.getElementById('btnSendChat');
+  const chatSafetyNotice = document.getElementById('chatSafetyNotice');
+
   // State
   let myPlayerNum = 1; // 1 (Red) or 2 (Yellow)
   let currentTurn = 1;
@@ -50,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let totalTurns = 0;
   let pendingJoin = null;
   let isQueued = false;
+  let isPveMatch = false;
 
   // Initialize Socket Client
   const socketClient = new GameSocketClient();
@@ -97,15 +106,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   socketClient.on('error', (payload) => {
-    // Socket-level failures pass a DOM Event; queue rejections pass {code, message}.
-    if (!payload || !payload.code) return;
-    isQueued = false;
-    clearInterval(queueInterval);
-    queueModal.classList.add('hidden');
-    onboardingModal.classList.remove('hidden');
-    formError.textContent = payload.message || 'Something went wrong. Please try again.';
-    formError.classList.remove('hidden');
-    socketClient.disconnect();
+    // Distinguish between queue-time errors (show in form) and in-game errors (show toast)
+    const message = payload && payload.message
+      ? payload.message
+      : 'Something went wrong. Please try again.';
+
+    if (!queueModal.classList.contains('hidden')) {
+      isQueued = false;
+      clearInterval(queueInterval);
+      queueModal.classList.add('hidden');
+      onboardingModal.classList.remove('hidden');
+      formError.textContent = message;
+      formError.classList.remove('hidden');
+      socketClient.disconnect();
+    } else {
+      showToast(message);
+    }
   });
 
   socketClient.on('queue_left', () => {
@@ -131,6 +147,33 @@ document.addEventListener('DOMContentLoaded', () => {
     player1Role.textContent = myPlayerNum === 1 ? 'Host' : 'Opponent';
     player2Name.textContent = myPlayerNum === 2 ? 'You (Yellow)' : `${payload.opponent_nickname} (Yellow)`;
     player2Role.textContent = payload.is_pve ? 'AI Bot (GLM)' : 'Peer';
+
+    // Setup chat mode & daily topics
+    isPveMatch = Boolean(payload.is_pve);
+    chatMessageList.innerHTML = '';
+    const emptyHint = document.createElement('div');
+    emptyHint.className = 'chat-empty-hint';
+    emptyHint.textContent = isPveMatch
+      ? 'Chat with AI Coach or tap any daily icebreaker card above!'
+      : 'Tap any Daily Campus Icebreaker topic above to share topics safely!';
+    chatMessageList.appendChild(emptyHint);
+    chatTypingIndicator.classList.add('hidden');
+
+    if (isPveMatch) {
+      chatBadge.textContent = 'AI Companion';
+      chatBadge.className = 'chat-badge pve';
+      chatInput.disabled = false;
+      chatInput.placeholder = 'Chat with AI Coach (e.g. coffee, midterm, study tips)...';
+      btnSendChat.disabled = false;
+      chatSafetyNotice.classList.add('hidden');
+    } else {
+      chatBadge.textContent = 'Peer Match';
+      chatBadge.className = 'chat-badge pvp';
+      chatInput.disabled = true;
+      chatInput.placeholder = 'Pick an Icebreaker Topic above to chat safely...';
+      btnSendChat.disabled = true;
+      chatSafetyNotice.classList.remove('hidden');
+    }
 
     updateTurnState(1);
     startTurnTimer(payload.turn_duration_seconds || 30);
@@ -164,32 +207,81 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(payload.message || 'AI opponent operating in local fallback mode.');
   });
 
-  socketClient.on('queue_status', (payload) => {
-    const timeout = payload.timeout_seconds || 15;
-    const elapsed = Math.min(timeout, payload.elapsed_seconds || 0);
-    queueProgress.style.width = `${(elapsed / timeout) * 100}%`;
-    const remaining = Math.max(0, timeout - elapsed);
-    queueTimerText.textContent = `${remaining}s remaining before AI opponent joins`;
-  });
-
   socketClient.on('rematch_waiting', (payload) => {
     showToast(payload.message || 'Waiting for your opponent to accept the rematch.');
   });
 
-  socketClient.on('error', (payload) => {
-    const message = payload && payload.message
-      ? payload.message
-      : 'The server rejected that request.';
-    if (!queueModal.classList.contains('hidden')) {
-      clearInterval(queueInterval);
-      queueModal.classList.add('hidden');
-      onboardingModal.classList.remove('hidden');
-      formError.textContent = message;
-      formError.classList.remove('hidden');
-    } else {
-      showToast(message);
+  // Chat & Icebreaker Events
+  socketClient.on('chat_message', (payload) => {
+    appendChatMessage(payload);
+  });
+
+  socketClient.on('chat_reply', (payload) => {
+    hideChatTyping();
+    appendChatMessage(payload);
+  });
+
+  // Daily Topic Pills Click Handlers
+  document.querySelectorAll('.topic-pill-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const topicId = parseInt(btn.dataset.id, 10);
+      const text = btn.textContent.trim();
+      socketClient.send('chat_send', { topic_id: topicId, text });
+      if (isPveMatch) {
+        showChatTyping();
+      }
+    });
+  });
+
+  // Chat Form Submit Handler
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text) return;
+    socketClient.send('chat_send', { text });
+    chatInput.value = '';
+    if (isPveMatch) {
+      showChatTyping();
     }
   });
+
+  function appendChatMessage(msg) {
+    const emptyHint = chatMessageList.querySelector('.chat-empty-hint');
+    if (emptyHint) emptyHint.remove();
+
+    const isMe = msg.from_player === myPlayerNum;
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${isMe ? 'me' : 'them'} ${msg.topic_id ? 'topic-card' : ''}`;
+
+    const senderSpan = document.createElement('span');
+    senderSpan.className = 'chat-sender';
+    senderSpan.textContent = isMe ? 'You' : (msg.sender_name || 'Opponent');
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'chat-text';
+    textSpan.textContent = msg.text;
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'chat-time';
+    const d = msg.timestamp ? new Date(msg.timestamp * 1000) : new Date();
+    timeSpan.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    bubble.appendChild(senderSpan);
+    bubble.appendChild(textSpan);
+    bubble.appendChild(timeSpan);
+
+    chatMessageList.appendChild(bubble);
+    chatMessageList.scrollTop = chatMessageList.scrollHeight;
+  }
+
+  function showChatTyping() {
+    chatTypingIndicator.classList.remove('hidden');
+    chatMessageList.scrollTop = chatMessageList.scrollHeight;
+  }
+
+  function hideChatTyping() {
+    chatTypingIndicator.classList.add('hidden');
+  }
 
   // Registration Form Submit
   registrationForm.addEventListener('submit', (e) => {

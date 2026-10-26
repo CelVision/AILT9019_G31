@@ -76,3 +76,33 @@ def test_expired_turn_finishes_room(monkeypatch):
     assert room["room_id"] not in main.active_rooms
     assert main.finished_rooms[room["room_id"]]["p1"]["session_id"] == "human"
     main.finished_rooms.clear()
+
+
+def test_daily_topics_endpoint():
+    topics = asyncio.run(main.get_daily_topics())
+    assert "topics" in topics
+    assert len(topics["topics"]) >= 4
+    assert any("Coffee" in t["label"] for t in topics["topics"])
+
+
+def test_ai_chat_turn_generates_companion_reply(monkeypatch):
+    async def fake_reply(history):
+        return "I prefer tea in the morning!"
+
+    monkeypatch.setattr(main, "generate_chat_reply", fake_reply)
+    room = {
+        "room_id": "chat-test-room",
+        "is_pve": True,
+        "engine": ConnectFourEngine(),
+        "p1": {"ws": None, "session_id": "human", "nickname": "Alex"},
+        "p2": {"ws": None, "session_id": "bot", "nickname": "AI Coach"},
+        "chat_history": [{"role": "user", "content": "Coffee or tea?"}],
+    }
+    main.active_rooms.clear()
+    main.active_rooms[room["room_id"]] = room
+
+    asyncio.run(main.handle_ai_chat_turn(room))
+
+    assert len(room["chat_history"]) == 2
+    assert room["chat_history"][1]["content"] == "I prefer tea in the morning!"
+    main.active_rooms.clear()

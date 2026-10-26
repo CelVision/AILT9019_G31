@@ -93,6 +93,62 @@
           </div>
         </div>
       </div>
+
+      <!-- In-Game Chat & Daily Icebreakers Bar -->
+      <div class="chat-container">
+        <!-- Daily Topics Icebreaker Row -->
+        <div class="icebreaker-section">
+          <div class="icebreaker-header">
+            <span class="tray-label">☕ Daily Campus Icebreakers</span>
+            <span class="icebreaker-sub">Tap any topic card to chat</span>
+          </div>
+          <div id="topicPillsRow" class="topic-pills-row">
+            <button type="button" class="topic-pill-btn" data-id="1">☕ Coffee or Tea?</button>
+            <button type="button" class="topic-pill-btn" data-id="2">📚 Midterm Prep</button>
+            <button type="button" class="topic-pill-btn" data-id="3">🍕 Campus Food</button>
+            <button type="button" class="topic-pill-btn" data-id="4">🎧 Study Music</button>
+          </div>
+        </div>
+
+        <!-- Chat Box -->
+        <div class="chat-box">
+          <div class="chat-header">
+            <div class="chat-header-title">
+              <span class="chat-icon">💬</span>
+              <span id="chatTitle">Match Chat</span>
+              <span id="chatBadge" class="chat-badge pve">AI Companion</span>
+            </div>
+          </div>
+
+          <div id="chatMessageList" class="chat-message-list">
+            <div class="chat-empty-hint">Tap a daily topic or say hello to start chatting!</div>
+          </div>
+
+          <div id="chatTypingIndicator" class="chat-typing-indicator hidden">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-text">AI Coach is thinking…</span>
+          </div>
+
+          <!-- Chat Input Row -->
+          <form id="chatForm" class="chat-input-row">
+            <input
+              type="text"
+              id="chatInput"
+              class="chat-input"
+              placeholder="Chat with AI Coach (e.g. coffee, midterm, study tips)..."
+              maxlength="140"
+              autocomplete="off"
+            >
+            <button type="submit" id="btnSendChat" class="btn btn-chat-send">Send</button>
+          </form>
+
+          <div id="chatSafetyNotice" class="chat-safety-notice hidden">
+            <span>🔒 <strong>Safe PvP Mode</strong>: Tap a Daily Icebreaker topic above to share pre-approved collegiate topics without stranger DMs.</span>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Onboarding & Guest Registration Modal -->

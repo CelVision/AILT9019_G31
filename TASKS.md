@@ -157,8 +157,8 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
   - `choose_fallback_move()` now plays Minimax (depth 4) when GLM fails, validates the column against the live board, and only degrades to a centre-out legal move if Minimax raises or returns an illegal column.
   - `pve_fallback_notice` now carries `reason` and `strategy` (`minimax` / `safe_move`).
   - Covered by Test Suite B, including a must-block case.
-- [ ] **[TODO]** `WP3-8`: Update AI references in README, TECH_SPEC, and PROJECT_PLAN (Gemini → GLM; deferred Minimax) | **Assignee**: @Unassigned | **Priority**: High | **Due**: 2026-10-24
-  - Keep the formal docs consistent with the provider actually implemented; record the deviation.
+- [x] **[DONE]** `WP3-8`: Update AI references in README, TECH_SPEC, and PROJECT_PLAN (Gemini → GLM; Minimax fallback) | **Assignee**: @Team | **Completed**: 2026-10-26
+  - Formal docs updated to reflect GLM-4.5-Air runtime (3.5s timeout) and depth-4 Minimax fallback.
 
 ### WP2: Age-Gated Matchmaking Queue
 - [x] **[DONE]** `WP2-5`: Implement in-memory FIFO Matchmaking Queue (`server/app/matchmaking.py`) | **Assignee**: @Team | **Completed**: 2026-10-26
@@ -208,7 +208,7 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
 
 ### WP1: Final Polish & Stretch Features
 - [ ] **[TODO]** `WP1-7`: Add sound effects (token drop sound, win chime, sticker pop) | **Assignee**: @Unassigned | **Priority**: Low | **Due**: 2026-10-24
-- [ ] **[TODO]** `WP1-8`: Implement post-game mutual rematch button | **Assignee**: @Unassigned | **Priority**: Medium | **Due**: 2026-10-24
+- [x] **[DONE]** `WP1-8`: Implement post-game mutual rematch button | **Assignee**: @David | **Completed**: 2026-10-26
   - Allow paired players to click "Rematch" without re-entering matchmaking queue.
 
 ---
@@ -223,9 +223,32 @@ Small, low-risk tasks that can be picked up without touching the GLM integration
 
 ---
 
+## 💬 Feature Plan: AI Conversational Companion & Daily Chat Bar (Sprint 4)
+
+> **Safety & Architecture Design Note:**
+> - **In PvE Mode (Human vs. AI Bot)**: Safe for interactive text chatting. The player can chat directly with `AI Coach` (Alibaba Cloud Bailian / Qwen3.6-Flash) about game strategies and daily university life ("How's your semester?", "Study tips", etc.). Zero risk of peer harassment or PII leakage since the counterpart is an AI.
+> - **In PvP Mode (Human vs. Human)**: Preserves the Section 5 safety promise (no unmoderated free-text chat). Instead, players get **"Daily Icebreaker Cards"** (curated daily conversation prompts / casual discussion starters like campus spots, music, weekend plans) that can be sent with one tap.
+
+- [x] **[DONE]** `WP3-9`: PvE Conversational LLM Engine (`server/app/ai/chat_agent.py`) | **Assignee**: @David | **Completed**: 2026-10-26
+  - Ephemeral conversational context for PvE room (sliding 6 message memory per match).
+  - Friendly collegiate peer system prompt with strict refusal of PII/harmful queries.
+  - Asynchronous background response generation with Bailian Qwen3.6-Flash integration.
+- [x] **[DONE]** `WP1-9`: In-Game Chat Bar & Daily Topic Cards (`client/index.html`, `client/css/style.css`, `client/js/app.js`) | **Assignee**: @David | **Completed**: 2026-10-26
+  - Sleek glassmorphic chatting bar beside/below the Connect Four board with typing indicator.
+  - Interactive input field (active in PvE mode) with send button and character counter (max 140 chars).
+  - Quick-tap "Daily Icebreaker Cards" (active in both PvP and PvE) with 4 collegiate conversation starters.
+  - Dynamic speech bubble rendering for player, opponent, and AI Coach.
+- [x] **[DONE]** `WP2-7`: WebSocket Conversational Event Protocol (`server/app/main.py`) | **Assignee**: @David | **Completed**: 2026-10-26
+  - Route C2S `chat_send` and S2C `chat_message` / `chat_reply`.
+  - Rate limiting (max 1 message per 2 seconds per client) to prevent spam.
+  - Input validation, length bounds ($\le 140$ chars), and PvP safety guardrail enforcement.
+
+---
+
 ## 💡 Backlog / Colleague Idea Box
 *Drop open ideas, UX enhancements, or bugs here for discussion:*
 - [ ] Idea: Add quick visual indicator on board showing last dropped token highlight (pulsing yellow/red outline).
 - [ ] Idea: Add dark/light mode toggle in top corner.
 - [ ] Idea: Add animated confetti burst on win using Canvas 2D particle emitter.
+- [ ] Idea: Daily Icebreaker Topic generator refreshed every 24h (e.g. Monday: "Weekend recap", Wednesday: "Midterm survival").
 - [ ] Note: Ensure Nginx WebSocket buffer size is tuned to prevent connection drops on mobile network handovers.

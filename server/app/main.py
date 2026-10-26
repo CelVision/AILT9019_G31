@@ -17,6 +17,7 @@ from app.game_engine import ConnectFourEngine
 from app.matchmaking import MatchmakingQueue, QueueEntry
 from app.ai.glm_client import GLMError, request_glm_move, safe_legal_column
 from app.ai.minimax_fallback import get_minimax_move
+from app.ai.chat_agent import DAILY_TOPICS, generate_chat_reply
 
 
 app = FastAPI(title="ConnectFour Connect")
@@ -177,6 +178,7 @@ def find_room_for_session(session_id: str) -> tuple[str | None, dict | None]:
     return None, None
 
 
+@app.get("/health")
 @app.get("/api/health")
 async def health_check():
     ai = get_ai_settings()
@@ -188,6 +190,12 @@ async def health_check():
         "llm_enabled": ai.enabled,
         "llm_model": ai.default_model,
     }
+
+
+@app.get("/api/daily_topics")
+@app.get("/api/daily-topics")
+async def get_daily_topics():
+    return {"topics": DAILY_TOPICS}
 
 
 # Matchmaking Background Task
@@ -281,6 +289,8 @@ async def create_pvp_match(user_a: dict | QueueEntry, user_b: dict | QueueEntry)
         "p2": user_b,
         "current_turn": 1,
         "turn_start": time.time(),
+        "chat_history": [],
+        "last_chat_time": {},
     }
     active_rooms[room_id] = room
 
@@ -291,7 +301,8 @@ async def create_pvp_match(user_a: dict | QueueEntry, user_b: dict | QueueEntry)
         "assigned_player": 1,
         "opponent_nickname": user_b["nickname"],
         "opponent_age": user_b["age"],
-        "turn_duration_seconds": TURN_DURATION_SECONDS
+        "turn_duration_seconds": TURN_DURATION_SECONDS,
+        "daily_topics": DAILY_TOPICS,
     })
 
     # Notify Player 2
@@ -301,7 +312,8 @@ async def create_pvp_match(user_a: dict | QueueEntry, user_b: dict | QueueEntry)
         "assigned_player": 2,
         "opponent_nickname": user_a["nickname"],
         "opponent_age": user_a["age"],
-        "turn_duration_seconds": TURN_DURATION_SECONDS
+        "turn_duration_seconds": TURN_DURATION_SECONDS,
+        "daily_topics": DAILY_TOPICS,
     })
 
 
@@ -326,6 +338,8 @@ async def create_pve_match(user: dict | QueueEntry):
         "p2": bot_user,
         "current_turn": 1,
         "turn_start": time.time(),
+        "chat_history": [],
+        "last_chat_time": {},
     }
     active_rooms[room_id] = room
 
@@ -335,7 +349,8 @@ async def create_pve_match(user: dict | QueueEntry):
         "assigned_player": 1,
         "opponent_nickname": "GLM Bot",
         "opponent_age": user["age"],
-        "turn_duration_seconds": TURN_DURATION_SECONDS
+        "turn_duration_seconds": TURN_DURATION_SECONDS,
+        "daily_topics": DAILY_TOPICS,
     })
 
 
@@ -503,6 +518,88 @@ async def websocket_endpoint(websocket: WebSocket):
                             await manager.send_json(r["p1"]["ws"], "broadcast_reaction", reaction_payload)
                         break
 
+            elif msg_type == "chat_send":
+                _, room = find_room_for_session(session_id)
+                if not room:
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("room_not_found", "No active game room found for chatting."),
+                    )
+                    continue
+
+                now = time.time()
+                last_time = room.get("last_chat_time", {}).get(session_id, 0)
+                if now - last_time < 2.0:
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("rate_limit_exceeded", "You are chatting too fast. Please wait a moment."),
+                    )
+                    continue
+
+                topic_id = payload.get("topic_id")
+                raw_text = payload.get("text", "")
+                text = str(raw_text).strip() if raw_text is not None else ""
+
+                selected_topic = None
+                if topic_id is not None:
+                    try:
+                        t_id = int(topic_id)
+                        selected_topic = next((t for t in DAILY_TOPICS if t["id"] == t_id), None)
+                    except (ValueError, TypeError):
+                        pass
+
+                if not text and selected_topic:
+                    text = f"{selected_topic['label']} — {selected_topic['prompt']}"
+
+                if not text:
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("empty_message", "Chat message cannot be empty."),
+                    )
+                    continue
+
+                if len(text) > 140:
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("message_too_long", "Chat message must be 140 characters or fewer."),
+                    )
+                    continue
+
+                # Section 5 Ethics & Safety guardrail:
+                # In PvP matches between human strangers, free-form text chat is restricted to
+                # pre-approved Daily Icebreaker Cards to prevent toxicity and PII leaks.
+                if not room["is_pve"] and not selected_topic:
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("pvp_chat_restricted", "In PvP matches, please use the Daily Icebreaker Cards to share topics safely."),
+                    )
+                    continue
+
+                room.setdefault("last_chat_time", {})[session_id] = now
+                sender_num = 1 if room["p1"]["session_id"] == session_id else 2
+                sender_name = room["p1"]["nickname"] if sender_num == 1 else room["p2"]["nickname"]
+
+                msg_payload = {
+                    "from_player": sender_num,
+                    "sender_name": sender_name,
+                    "text": text,
+                    "topic_id": topic_id,
+                    "timestamp": now,
+                }
+                await send_room_event(room, "chat_message", msg_payload)
+
+                if room["is_pve"]:
+                    history = room.setdefault("chat_history", [])
+                    history.append({"role": "user", "content": text})
+                    if len(history) > 10:
+                        room["chat_history"] = history[-10:]
+                    asyncio.create_task(handle_ai_chat_turn(room))
+
             elif msg_type == "rematch_request":
                 finished = next(
                     (
@@ -547,6 +644,34 @@ async def websocket_endpoint(websocket: WebSocket):
                 "winner": 2 if room["p1"]["session_id"] == session_id else 1,
                 "reason": "opponent_disconnected",
             })
+
+
+async def handle_ai_chat_turn(room: dict):
+    """Generate and broadcast an AI companion reply in PvE matches."""
+    await asyncio.sleep(0.5)
+    if room.get("ended") or room["room_id"] not in active_rooms:
+        return
+
+    history = room.get("chat_history", [])
+    try:
+        reply = await generate_chat_reply(history)
+    except Exception:
+        reply = "I'm focusing on the board right now! Nice move!"
+
+    if room.get("ended") or room["room_id"] not in active_rooms:
+        return
+
+    history.append({"role": "assistant", "content": reply})
+    if len(history) > 10:
+        room["chat_history"] = history[-10:]
+
+    reply_payload = {
+        "from_player": 2,
+        "sender_name": "AI Coach",
+        "text": reply,
+        "timestamp": time.time(),
+    }
+    await send_room_event(room, "chat_reply", reply_payload)
 
 
 async def handle_ai_turn(room: dict):
