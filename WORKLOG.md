@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-26 — Deployment PR #2 review (`c29d8e7`)
+
+- Pulled and reviewed the merged deployment contribution: Dockerfile, Dockerfile-specific build-context ignore, Compose service, endpoint checker, checker regression tests, hardened systemd unit, README rewrite, and deployment notes.
+- **Verified locally:** `python -m pytest tests/ -q` → **42 passed** (2 existing FastAPI deprecation warnings). `python deploy/check_public_url.py http://127.0.0.1:8000` passed all 8 checks against a locally started Uvicorn server. `compileall`, `git diff --check`, and local documentation-link checks passed.
+- **No blocking implementation defects found** in the checker or Compose/systemd definitions reviewed statically. The Dockerfile-specific ignore file correctly limits the context to `server/app`, `server/requirements.txt`, and `client`; secrets are not copied into the image.
+- **Still unverified:** Docker is not installed on this workstation, so the image was not built. Nginx/systemd/VPS/DNS/TLS/public-URL acceptance remains open (WP4-2 through WP4-4). The PR is deployment configuration, not a live deployment.
+- **Documentation blocker:** `docs/TECHNICAL_SPEC.md` and `docs/PROJECT_PLAN.md` still describe **Gemini 1.5 Flash** with a **1.5s** budget, while the README/code now use **GLM-4.5-Air** with a **3.5s** budget. Update these formal documents before the checkpoint report.
+- **Minor notes:** the deployment changelog reports 3 deprecation warnings (2 observed here); the Dockerfile-specific ignore depends on BuildKit for the strongest build-context exclusion; the new local README command omits `--reload` for development.
+
+---
+
 ## 2026-10-23 — XIANG HANCHENG deployment implementation
 
 - **Branch:** `deploy_XIANG-HANCHENG`, based on `3726563`. The old deployment PR #1 is closed; this work uses the team member's existing branch.
