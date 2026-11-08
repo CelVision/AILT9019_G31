@@ -2,9 +2,10 @@
 
 Welcome to the team task tracker! This document is designed for all team members to view, claim, update, and add development tasks as we build toward the **Mid-Term Checkpoint (Monday, October 26)**.
 
-**Last updated:** 2026-10-26 · **Detailed worklog:** [docs/WORKLOG.md](docs/WORKLOG.md)
+**Last updated:** 2026-11-08 · **Detailed worklog:** [docs/WORKLOG.md](docs/WORKLOG.md)
 
 ## 🗞️ Recent Updates
+- **2026-11-08 — Progress review (`10876d2`):** Pulled latest `main` and reviewed the post-checkpoint release. **94 Python tests pass**; the endpoint checker passes 8/8; onboarding, 15s PvE transition, turn timeout, post-match AI chat, and PvE rematch were exercised in the browser. Findings recorded in the worklog: Bailian/Qwen provider vs. GLM docs/labels drift, PvP topic guardrail bypass, queue-capacity error path, stale finished-room selection, and game-over state/copy bugs. `node` is unavailable locally (pointer test not rerun); Docker/VPS/systemd/Nginx acceptance remains unverified.
 - **2026-10-26 — UI Game Area & Chat Area Division + Post-Match Chat Persistence:** Redesigned the match interface into dedicated two-column `.game-area` and `.chat-area` cards. In-game and post-game chat states are completely independent of game outcome (win/loss/draw does not close chat or block messaging; rematch preserves conversation history). Server `finished_rooms` preserves chat history and handles post-match LLM banter turns. Full test suite has **94 passing tests**.
 - **2026-10-26 — Sponsored Alibaba Cloud Bailian Integration:** Integrated official Group 31 sponsored Bailian access (`qwen3.6-flash`) with OpenAI-compatible endpoint. Implemented multi-turn contextual AI chat companion with sliding 6-turn history and canned campus icebreakers. Verified with automated regression tests.
 - **2026-10-26 — QW-3 touchscreen input:** Implemented touch/pen pointer selection in `client/js/game_board.js`, preserved desktop hover preview, and added `tests/test_game_board_pointer.js`. Automated regression test passes; physical iOS/Android verification is still pending. QW-3 remains in REVIEW.

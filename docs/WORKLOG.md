@@ -2,6 +2,24 @@
 
 **Purpose:** running handoff log for the team. Record decisions, completed work, verification results, and anything the next person needs to know. Newest entries first. **Never paste API keys, tokens, or real `.env` contents here.**
 
+## 2026-11-08 — Progress review (main `10876d2`)
+
+- Pulled/fetched `origin`: `main` was already at `10876d2` (latest commit dated 2026-10-26); working tree clean.
+- Reviewed the post-checkpoint changes: Bailian/Qwen chat integration, PvE AI companion chat and icebreakers, protocol hardening, matchmaking extraction, Suites A/B, Minimax restoration, touch input, and the two-column/post-match UI redesign.
+- **Verification:** `python -m pytest tests/ -q` → **94 passed**, 2 existing FastAPI lifecycle deprecation warnings. `python deploy/check_public_url.py http://127.0.0.1:8000` → **8/8** checks. Manually exercised onboarding, 15-second PvE transition, turn timeout, post-match AI chat, and PvE rematch in the browser at an 800px viewport. `node` is unavailable locally, so `tests/test_game_board_pointer.js` could not be rerun; Docker/VPS/systemd/Nginx acceptance remains unverified.
+- **Live provider smoke:** `server/.env` currently targets Ali Bailian `qwen3.6-flash`; the move adapter returned legal columns in **1.4–3.9s** across probes. One direct chat request took **4.9s** and returned the canned fallback, while the browser chat produced a model reply, so latency is variable and the shared 3.5s budget is tight for chat.
+- **Findings to address:**
+  - **Provider/docs drift:** runtime `.env` and `chat_agent.py` use Bailian/Qwen, but README, `TECHNICAL_SPEC.md`, `PROJECT_PLAN.md`, `.env.example`, Compose defaults, UI labels (`GLM Bot`), and the `glm_client` docstring still describe GLM-4.5-Air. A fresh clone gets GLM defaults rather than the sponsored Bailian setup.
+  - **PvP chat guardrail bypass:** `chat_send` accepts any valid `topic_id` together with arbitrary `text`; the server should substitute the canonical topic text or validate the text exactly before broadcasting.
+  - **Queue capacity/error path:** `queue_join` appends to `matching_pool` before `matchmaking.add`; a full queue raises `QueueRejected("queue_full")` outside a handler, closing the socket and leaving a stale pool entry. The same handler also allows a player already in an active room to enter matchmaking.
+  - **Finished-room selection:** `find_room_for_chat` and `rematch_request` choose the first matching `finished_rooms` record. After multiple games, a session can bind to an older opponent/chat history; retain only the latest record per session or select by `finished_at`.
+  - **Game-over UI:** `game_over` leaves `turnIndicator` on "Your Turn" and does not clear active-turn styling; the result modal uses "connected 4 in a row" copy for `turn_timeout` and disconnect reasons.
+  - **Chat timeout:** `generate_chat_reply` uses the same 3.5s timeout as moves and has no outer deadline; a slow model request can show the typing indicator for several seconds before a canned reply. Consider a separate chat budget.
+  - **Documentation contradiction:** README and `PROJECT_PLAN.md` still claim free-form text is completely omitted, although PvE chat is now a shipped feature.
+- **Next work:** reconcile provider/docs/UI naming, close the chat guardrail bypass, fix queue/finished-room state handling, update game-over copy/state, then add regression tests and complete public deployment acceptance.
+
+---
+
 ## 2026-10-26 — Protocol hardening and local acceptance fixes
 
 - Added server-side registration validation with explicit `error` frames for invalid nicknames, ages, message payloads, columns, and reactions.
