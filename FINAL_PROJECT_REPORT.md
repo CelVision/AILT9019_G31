@@ -4,7 +4,7 @@
 **Academic Term:** Autumn 2026  
 **Team:** Group 31  
 **Authors & Contributors:**
-* **David (CelVision)** — Project Coordinator, Full-Stack Architecture, LLM & Minimax Orchestration
+* **Yuzhou Zhou (CelVision)** — Project Coordinator, Full-Stack Architecture, LLM & Minimax Orchestration
 * **Scott Xiang (XIANG HANCHENG)** — DevOps Lead, Containerization, Systemd, Nginx & Endpoint Validation
 * **Leo Shang (LeoShang22)** — Frontend Client Lead, HTML5 Canvas Engine, Pointer Input & Web Audio Synthesis
 * **Yuexiang Ma (MA Yue Xiang)** — Backend Systems Lead, Matchmaking Queue, Test Suites A/B & Cohort Evaluation
@@ -17,7 +17,7 @@ Digital social platforms for university students suffer from pervasive conversat
 ---
 
 ## 1. Introduction, Problem Statement & Objectives
-*(Section Contributions: David 50%, Leo Shang 50%)*
+*(Section Contributions: Yuzhou Zhou 50%, Leo Shang 50%)*
 
 ### 1.1 The Social Anxiety Bottleneck on Campus
 Modern young adults and university students experience substantial interpersonal friction when attempting to form new peer connections online. Mainstream digital networking platforms mandate detailed personal profiles, photo screening, and unguided text messaging. In an academic campus setting, this model triggers conversational paralysis: students fear saying the wrong thing, worry about superficial judgment, and struggle to sustain open-ended introductory dialogues.
@@ -32,7 +32,7 @@ To remove these emotional barriers, ConnectFour Connect adopts an **activity-cen
 ---
 
 ## 2. System Architecture & End-to-End Pipeline
-*(Section Contributions: David 45%, Scott Xiang 30%, Yuexiang Ma 25%)*
+*(Section Contributions: Yuzhou Zhou 45%, Scott Xiang 30%, Yuexiang Ma 25%)*
 
 The platform follows a decoupled, high-performance architecture built on asynchronous Python (FastAPI), real-time WebSockets, HTML5 Canvas 2D, and remote cloud infrastructure.
 
@@ -79,17 +79,17 @@ The platform follows a decoupled, high-performance architecture built on asynchr
 ---
 
 ## 3. Key Technical Implementations
-*(Section Contributions: David 35%, Leo Shang 25%, Scott Xiang 20%, Yuexiang Ma 20%)*
+*(Section Contributions: Yuzhou Zhou 35%, Leo Shang 25%, Scott Xiang 20%, Yuexiang Ma 20%)*
 
 ### 3.1 Age-Gated Matchmaking & In-Memory Room Manager
-*(Sub-section Contributions: Yuexiang Ma 60%, David 40%)*
+*(Sub-section Contributions: Yuexiang Ma 60%, Yuzhou Zhou 40%)*
 Implemented in [`matchmaking.py`](file:///d:/Github%20Homepage/AILT9019_G31/server/app/matchmaking.py) and [`room_manager.py`](file:///d:/Github%20Homepage/AILT9019_G31/server/app/room_manager.py):
 * **Deterministic Single-Pass Tick:** `MatchmakingQueue.tick()` simultaneously executes peer pairing and 15s timeout expiry in a single atomic pass, eliminating race conditions between human matching and AI fallback.
 * **Authoritative 1 Hz Heartbeat:** Pushes `queue_status` (`elapsed_seconds`, `remaining_seconds`, queue position) once per second.
 * **Session Lifecycle:** `RoomManager` encapsulates active match dictionaries and retains finished match state for 600 seconds, enabling post-game banter and mutual rematch handshakes while evicting stale memory.
 
 ### 3.2 Dual-Tier Fault-Tolerant AI Engine
-*(Sub-section Contributions: David 85%, Yuexiang Ma 15%)*
+*(Sub-section Contributions: Yuzhou Zhou 85%, Yuexiang Ma 15%)*
 Implemented in [`glm_client.py`](file:///d:/Github%20Homepage/AILT9019_G31/server/app/ai/glm_client.py), [`minimax_fallback.py`](file:///d:/Github%20Homepage/AILT9019_G31/server/app/ai/minimax_fallback.py), and [`chat_agent.py`](file:///d:/Github%20Homepage/AILT9019_G31/server/app/ai/chat_agent.py):
 * **Primary LLM (Qwen3.6-Flash):** Connects to Alibaba Cloud Bailian's OpenAI-compatible endpoint. Prompts serialize the board matrix and enforce strict JSON schema output: `{"column": int, "canned_reaction_id": int}`.
 * **Turn Deadline & Race Condition Protection:** AI requests run inside `asyncio.wait_for` capped at 3.5 seconds.
@@ -99,14 +99,14 @@ Implemented in [`glm_client.py`](file:///d:/Github%20Homepage/AILT9019_G31/serve
 * **Conversational AI Coach:** In PvE, users can chat freely with the AI Coach. A 6-turn sliding window prevents token explosion, while the system prompt enforces polite collegiate boundaries.
 
 ### 3.3 Canvas 2D Engine, Pointer Input & Audio Synthesis
-*(Sub-section Contributions: Leo Shang 80%, David 20%)*
+*(Sub-section Contributions: Leo Shang 80%, Yuzhou Zhou 20%)*
 Implemented in [`game_board.js`](file:///d:/Github%20Homepage/AILT9019_G31/client/js/game_board.js) and [`sound_effects.js`](file:///d:/Github%20Homepage/AILT9019_G31/client/js/sound_effects.js):
 * **Pointer Events & CSS Scaling:** Unifies touch, pen, and mouse inputs under `pointerdown` and `pointermove`. Accounts for responsive CSS canvas scaling to accurately map viewport pixels to grid columns (0–6).
 * **Physics & Last-Move Highlights:** Smooth vertical token descent with gravity acceleration (`dropTokenAnimated`), golden borders for winning coordinates, and a glowing cyan indicator for the last dropped token.
 * **Web Audio API Synthesizer:** Real-time synthesis of token drops (exponential pitch bend 440Hz $\to$ 150Hz), victory arpeggios (C5-E5-G5-C6 chord), and reaction sticker pops with zero external MP3 assets.
 
 ### 3.4 DevOps, Containerization & Endpoint Verification
-*(Sub-section Contributions: Scott Xiang 85%, David 15%)*
+*(Sub-section Contributions: Scott Xiang 85%, Yuzhou Zhou 15%)*
 Implemented in [`deploy/Dockerfile`](file:///d:/Github%20Homepage/AILT9019_G31/deploy/Dockerfile), [`compose.yaml`](file:///d:/Github%20Homepage/AILT9019_G31/deploy/compose.yaml), and [`check_public_url.py`](file:///d:/Github%20Homepage/AILT9019_G31/deploy/check_public_url.py):
 * **Hardened Production Environment:** Non-root Python 3.12 Alpine container with read-only root filesystem, bounded logging, and single-worker systemd unit to guarantee queue consistency.
 * **Automated Health Checker:** `check_public_url.py` verifies 8/8 deployment invariants: HTTP 200 responses, non-empty HTML/CSS/JS bundles, API health status, and WebSocket upgrade handshakes.
@@ -114,7 +114,7 @@ Implemented in [`deploy/Dockerfile`](file:///d:/Github%20Homepage/AILT9019_G31/d
 ---
 
 ## 4. Verification, Testing & 15-User Cohort Usability Evaluation
-*(Section Contributions: Yuexiang Ma 50%, Scott Xiang 30%, David 20%)*
+*(Section Contributions: Yuexiang Ma 50%, Scott Xiang 30%, Yuzhou Zhou 20%)*
 
 ### 4.1 Automated Test Suites (100% Pass Rate)
 The codebase includes 100 automated unit and integration tests executed via `pytest`:
@@ -147,7 +147,7 @@ Qualitative feedback praised the low emotional stakes: *"The canned reactions an
 ---
 
 ## 5. Ethics, Safety & AI-Use Disclosure
-*(Section Contributions: David 60%, Yuexiang Ma 40%)*
+*(Section Contributions: Yuzhou Zhou 60%, Yuexiang Ma 40%)*
 
 ### 5.1 Platform Ethics & Safety Guardrails
 1. **Explicit "Does Not" Boundary:** ConnectFour Connect is explicitly not a dating app, not an unmonitored private messenger, not an offline meetup service, and strictly prohibited for minors.
@@ -162,7 +162,7 @@ Qualitative feedback praised the low emotional stakes: *"The canned reactions an
 ---
 
 ## 6. Discussion, Limitations & Future Work
-*(Section Contributions: David 30%, Scott Xiang 25%, Leo Shang 25%, Yuexiang Ma 20%)*
+*(Section Contributions: Yuzhou Zhou 30%, Scott Xiang 25%, Leo Shang 25%, Yuexiang Ma 20%)*
 
 ### 6.1 Key Insights
 Activity-mediated mini-games succeed in establishing initial rapport between strangers. Restricting communication to pre-approved phrases and icebreakers does not diminish engagement; rather, it removes the social burden of formulating witty introductory messages. Furthermore, the 15-second queue timeout backed by an interactive AI companion eliminates the cold-start problem common to multiplayer services.
@@ -174,7 +174,7 @@ Activity-mediated mini-games succeed in establishing initial rapport between str
 ---
 
 ## 7. Conclusion & Summary of Individual Contributions
-*(Section Contributions: David 34%, Scott Xiang 22%, Leo Shang 22%, Yuexiang Ma 22%)*
+*(Section Contributions: Yuzhou Zhou 34%, Scott Xiang 22%, Leo Shang 22%, Yuexiang Ma 22%)*
 
 ConnectFour Connect successfully demonstrated that activity-mediated turn-based gaming, combined with safety-first canned interactions and adaptive multi-tier AI fallback, provides a compelling, anxiety-free social avenue for university students.
 
@@ -182,12 +182,12 @@ ConnectFour Connect successfully demonstrated that activity-mediated turn-based 
 
 | Contributor | Roles & Work Packages | Key Codebase Contributions | Effort % |
 | :--- | :--- | :--- | :---: |
-| **David**  <br>*(CelVision)* | **Team Lead & Architecture**<br>WP0, WP3, WP2-7 | • End-to-end WebSocket architecture and protocol design<br>• Qwen3.6-Flash API client & Minimax fallback orchestration<br>• AI Coach companion chat agent & Daily Icebreaker cards<br>• Secret hygiene & frontend customization port | **34%** |
+| **Yuzhou Zhou**  <br>*(CelVision)* | **Team Lead & Architecture**<br>WP0, WP3, WP2-7 | • End-to-end WebSocket architecture and protocol design<br>• Qwen3.6-Flash API client & Minimax fallback orchestration<br>• AI Coach companion chat agent & Daily Icebreaker cards<br>• Secret hygiene & frontend customization port | **34%** |
 | **Scott Xiang** <br>*(XIANG HANCHENG)* | **DevOps & Infrastructure**<br>WP4, WP5-1 | • Dockerfile, Compose, and hardened systemd service unit<br>• Nginx SSL/WSS reverse proxy configuration<br>• Automated public endpoint checker (`check_public_url.py`)<br>• Packaging pipeline (`package_release.py`) | **22%** |
 | **Leo Shang** <br>*(LeoShang22)* | **Frontend & Visual Client**<br>WP1, QW-3, QW-6 | • HTML5 Canvas 2D 7×6 board renderer & dual-column UI<br>• Pointer event unified input (touch, pen, desktop mouse)<br>• Web Audio API sound synthesis (`sound_effects.js`)<br>• Token gravity descent animation & last-move highlight | **22%** |
 | **Yuexiang Ma** <br>*(MA Yue Xiang)* | **Backend Systems & QA**<br>WP2, WP5, QW-4, QW-5 | • In-memory FIFO Matchmaking queue (`matchmaking.py`)<br>• In-memory RoomManager extraction (`room_manager.py`)<br>• Test Suite A (20 age pairs) & Test Suite B (10 fault cases)<br>• 15-User cohort evaluation analysis (`generate_figures.py`) | **22%** |
 
-*Recalculated contribution weights reflect empirical codebase commitments, architectural complexity, and individual ownership across work packages: Lead Architecture & AI Orchestration (David, 34%), DevOps & Security Hardening (Scott Xiang, 22%), Frontend Canvas Engine & Sound Synthesis (Leo Shang, 22%), and Backend Matchmaking & Test Verification (Yuexiang Ma, 22%). Total: 100%.*
+*Recalculated contribution weights reflect empirical codebase commitments, architectural complexity, and individual ownership across work packages: Lead Architecture & AI Orchestration (Yuzhou Zhou, 34%), DevOps & Security Hardening (Scott Xiang, 22%), Frontend Canvas Engine & Sound Synthesis (Leo Shang, 22%), and Backend Matchmaking & Test Verification (Yuexiang Ma, 22%). Total: 100%.*
 
 ---
 
