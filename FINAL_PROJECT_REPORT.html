@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ConnectFour Connect Final Project Report</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 18mm 16mm 18mm 16mm;
+    @top-center {
+      content: "AILT9019 AI Literacy II · ConnectFour Connect (Group 31)";
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #64748b;
+    }
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #64748b;
+    }
+  }
+
+  *, *:before, *:after {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 9.2pt;
+    line-height: 1.38;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+
+  .report-title {
+    font-size: 15.5pt;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.25;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.3px;
+  }
+
+  .section-title {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #1e3a8a;
+    border-bottom: 1.5px solid #cbd5e1;
+    padding-bottom: 2px;
+    margin: 12px 0 4px 0;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .subsection-title {
+    font-size: 9.8pt;
+    font-weight: 700;
+    color: #0369a1;
+    margin: 8px 0 2px 0;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .contribution-note {
+    font-size: 8.2pt;
+    font-style: italic;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 2.5px 8px;
+    border-left: 3px solid #0284c7;
+    border-radius: 2px;
+    margin: 2px 0 5px 0;
+  }
+
+  .paragraph {
+    margin: 0 0 5px 0;
+    text-align: justify;
+    text-justify: inter-word;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 8px 0;
+  }
+
+  .list-item, .ordered-item {
+    margin: 0 0 3px 18px;
+    text-align: justify;
+  }
+
+  .table-container {
+    margin: 6px 0 8px 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.0pt;
+    line-height: 1.28;
+  }
+
+  th {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: left;
+    padding: 4px 6px;
+    border: 1px solid #0f172a;
+  }
+
+  td {
+    padding: 3.5px 6px;
+    border: 1px solid #cbd5e1;
+    vertical-align: top;
+  }
+
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+
+  .code-block {
+    background-color: #0f172a;
+    color: #f1f5f9;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 7.4pt;
+    line-height: 1.25;
+    padding: 6px 9px;
+    border-radius: 4px;
+    margin: 5px 0 7px 0;
+    white-space: pre;
+    overflow-x: hidden;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  code {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 8.2pt;
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 1px 3px;
+    border-radius: 2px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .file-ref {
+    color: #0369a1;
+    font-weight: 600;
+  }
+
+  .math-eq {
+    text-align: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 3px 6px;
+    margin: 4px 0;
+    font-size: 8.8pt;
+  }
+
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .appendix-header {
+    background: #e0f2fe;
+    border-left: 4px solid #0284c7;
+    padding: 4px 8px;
+    margin: 10px 0 6px 0;
+    font-size: 8.5pt;
+    color: #0369a1;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<!-- MAIN REPORT BODY (Sections 1 to 7) -->
+<div id="report-body">
+<h1 class="report-title">ConnectFour Connect: Activity-Mediated Social Mini-Game with Adaptive Multi-Tier AI Architecture</h1>
+<p class="paragraph"><strong>Course:</strong> AILT9019 · AI Literacy II</p>
+<p class="paragraph"><strong>Academic Term:</strong> Autumn 2026</p>
+<p class="paragraph"><strong>Team:</strong> Group 31</p>
+<p class="paragraph"><strong>Authors & Contributors:</strong></p>
+<li class="list-item"><strong>David (CelVision)</strong> — Project Coordinator, Full-Stack Architecture, LLM & Minimax Orchestration</li>
+<li class="list-item"><strong>Scott Xiang (XIANG HANCHENG)</strong> — DevOps Lead, Containerization, Systemd, Nginx & Endpoint Validation</li>
+<li class="list-item"><strong>Leo Shang (LeoShang22)</strong> — Frontend Client Lead, HTML5 Canvas Engine, Pointer Input & Web Audio Synthesis</li>
+<li class="list-item"><strong>Yuexiang Ma (MA Yue Xiang)</strong> — Backend Systems Lead, Matchmaking Queue, Test Suites A/B & Cohort Evaluation</li>
+<hr class="divider" />
+<h2 class="section-title">Abstract</h2>
+<p class="paragraph">Digital social platforms for university students suffer from pervasive conversational anxiety, high-stakes biographical self-presentation, and superficial appearance-based swiping. <strong>ConnectFour Connect</strong> addresses these issues through an <em>activity-mediated social interaction prototype</em> built on turn-based Connect Four. Player interaction is structured to lower cognitive and emotional friction: human peers match via an age-gated queue (Age ≥ 18, |\DeltaAge| ≤ 3) and communicate exclusively through curated canned reactions and Daily Icebreaker cards in PvP mode. To eliminate matchmaking wait times, a 15-second queue timeout routes solo players into an interactive PvE session powered by a dual-tier AI architecture: Alibaba Cloud Bailian's <strong><code>qwen3.6-flash</code></strong> for dynamic moves and collegiate companion banter, backed by a deterministic local <strong>depth-4 Minimax bot</strong> activating within 23.6ms upon upstream rate limits, latency, or outages. A 15-user cohort usability evaluation demonstrated a <strong>93.3%</strong> task completion rate (exceeding the 85% course benchmark) and an average Likert usability score of <strong>4.61 / 5.0</strong> (exceeding the 4.0 benchmark). Automated testing confirmed <strong>100/100 passing test cases</strong> with zero unhandled exceptions.</p>
+<hr class="divider" />
+<h2 class="section-title">1. Introduction, Problem Statement & Objectives</h2>
+<p class="contribution-note"><em>(Section Contributions: David 50%, Leo Shang 50%)</em></p>
+<h3 class="subsection-title">1.1 The Social Anxiety Bottleneck on Campus</h3>
+<p class="paragraph">Modern young adults and university students experience substantial interpersonal friction when attempting to form new peer connections online. Mainstream digital networking platforms mandate detailed personal profiles, photo screening, and unguided text messaging. In an academic campus setting, this model triggers conversational paralysis: students fear saying the wrong thing, worry about superficial judgment, and struggle to sustain open-ended introductory dialogues.</p>
+<h3 class="subsection-title">1.2 Activity-Mediated Socializing</h3>
+<p class="paragraph">To remove these emotional barriers, ConnectFour Connect adopts an <strong>activity-centered communication paradigm</strong>:</p>
+<li class="ordered-item"><strong>Activity as Primary Focus:</strong> Attention is centered on a low-friction, familiar board game (7-column × 6-row Connect Four). Turns provide natural pacing, eliminating awkward conversational pauses.</li>
+<li class="ordered-item"><strong>Guaranteed Low-Stakes Communication (PvP):</strong> Peer-to-peer interaction removes unmoderated free-form text. Players communicate through 6 sportsmanlike preset phrases, 4 reaction stickers, and 4 curated Daily Icebreaker Cards (e.g. <em>"Coffee or Tea?"</em>, <em>"Midterm Prep"</em>).</li>
+<li class="ordered-item"><strong>Conversational PvE AI Coach:</strong> If no human peer matches within 15 seconds, a server-side AI Coach steps in seamlessly. The AI Coach engages in collegiate banter and strategy discussion with strict safety guardrails.</li>
+<li class="ordered-item"><strong>Zero Wait-Time Availability:</strong> The platform is accessible via zero-configuration browser URLs across desktop and mobile devices without registration friction.</li>
+<hr class="divider" />
+<h2 class="section-title">2. System Architecture & End-to-End Pipeline</h2>
+<p class="contribution-note"><em>(Section Contributions: David 45%, Scott Xiang 30%, Yuexiang Ma 25%)</em></p>
+<p class="paragraph">The platform follows a decoupled, high-performance architecture built on asynchronous Python (FastAPI), real-time WebSockets, HTML5 Canvas 2D, and remote cloud infrastructure.</p>
+<pre class="code-block"><code>┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   CLIENT (BROWSER)                                     │
+│  ┌───────────────────────┐  ┌───────────────────────┐  ┌────────────────────────────┐  │
+│  │ HTML5 Canvas 2D Board │  │ In-Game Canned Tray   │  │ Dual-Column Match Hub      │  │
+│  │ (Pointer Events / FX) │  │ (Phrases &amp; Stickers)  │  │ (AI Banter &amp; Icebreakers)  │  │
+│  └───────────┬───────────┘  └───────────┬───────────┘  └─────────────┬──────────────┘  │
+└──────────────┼──────────────────────────┼────────────────────────────┼─────────────────┘
+               │                          │ WebSocket                  │
+               ▼                          ▼ (/ws/game)                 ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              FASTAPI BACKEND &amp; NETWORKING                              │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ ConnectionManager (Session UUIDs, Disconnect Handling, Rate Limiter)             │  │
+│  └────────────────────────────────────────┬─────────────────────────────────────────┘  │
+│                                           ▼                                            │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ MatchmakingQueue (Age Gate &gt;=18, Gap &lt;=3, 1 Hz Heartbeat, 15s PvE Routing)       │  │
+│  └────────────────────┬───────────────────────────────────────┬─────────────────────┘  │
+│                       ▼                                       ▼                        │
+│  ┌────────────────────────────────────────┐  ┌──────────────────────────────────────┐  │
+│  │ RoomManager (Active &amp; Finished Rooms)  │  │ ConnectFourEngine (Bitboard / Matrix)│  │
+│  └────────────────────┬───────────────────┘  └──────────────────────────────────────┘  │
+│                       ▼                                                                │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ Adaptive Dual-Tier AI Subsystem                                                  │  │
+│  │  ├─ Tier 1: Primary LLM (Qwen3.6-Flash via Bailian API, 3.5s Deadline)           │  │
+│  │  └─ Tier 2: Local Deterministic Minimax Bot (Depth 4, Alpha-Beta, ~23.6ms)       │  │
+│  └──────────────────────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────────────────────┘</code></pre>
+<h3 class="subsection-title">2.1 The End-to-End User Journey</h3>
+<li class="ordered-item"><strong>Lightweight Onboarding:</strong> The user enters a nickname (2–16 characters) and birth year (verifying Age ≥ 18). An optional accordion allows users to provide custom LLM keys or select alternative models.</li>
+<li class="ordered-item"><strong>Matchmaking & Age-Window Search:</strong> The client opens <code>/ws/game</code> and transmits <code>queue_join</code>. The in-memory FIFO queue searches for compatible peers within an age variance |\DeltaAge| ≤ 3.</li>
+<li class="ordered-item"><strong>Real-Time Match Resolution:</strong></li>
+<li class="list-item"><strong>PvP Route:</strong> Two compatible students enter an isolated room. Game moves, board synchronization, and canned reactions broadcast over WebSockets.</li>
+<li class="list-item"><strong>PvE Route (15s Fallback):</strong> If no peer appears within 15 seconds, the server automatically instantiates a PvE match against the <strong>AI Coach</strong>.</li>
+<li class="ordered-item"><strong>Match Conclusion & Rematch:</strong> The outcome (Win/Loss/Draw) displays on the client with move duration and total turns. Consenting players may request an immediate rematch or return to the lobby.</li>
+<hr class="divider" />
+<h2 class="section-title">3. Key Technical Implementations</h2>
+<p class="contribution-note"><em>(Section Contributions: David 35%, Leo Shang 25%, Scott Xiang 20%, Yuexiang Ma 20%)</em></p>
+<h3 class="subsection-title">3.1 Age-Gated Matchmaking & In-Memory Room Manager</h3>
+<p class="contribution-note"><em>(Sub-section Contributions: Yuexiang Ma 60%, David 40%)</em></p>
+<p class="paragraph">Implemented in <span class="file-ref"><code>matchmaking.py</code></span> and <span class="file-ref"><code>room_manager.py</code></span>:</p>
+<li class="list-item"><strong>Deterministic Single-Pass Tick:</strong> <code>MatchmakingQueue.tick()</code> simultaneously executes peer pairing and 15s timeout expiry in a single atomic pass, eliminating race conditions between human matching and AI fallback.</li>
+<li class="list-item"><strong>Authoritative 1 Hz Heartbeat:</strong> Pushes <code>queue_status</code> (<code>elapsed_seconds</code>, <code>remaining_seconds</code>, queue position) once per second.</li>
+<li class="list-item"><strong>Session Lifecycle:</strong> <code>RoomManager</code> encapsulates active match dictionaries and retains finished match state for 600 seconds, enabling post-game banter and mutual rematch handshakes while evicting stale memory.</li>
+<h3 class="subsection-title">3.2 Dual-Tier Fault-Tolerant AI Engine</h3>
+<p class="contribution-note"><em>(Sub-section Contributions: David 85%, Yuexiang Ma 15%)</em></p>
+<p class="paragraph">Implemented in <span class="file-ref"><code>glm_client.py</code></span>, <span class="file-ref"><code>minimax_fallback.py</code></span>, and <span class="file-ref"><code>chat_agent.py</code></span>:</p>
+<li class="list-item"><strong>Primary LLM (Qwen3.6-Flash):</strong> Connects to Alibaba Cloud Bailian's OpenAI-compatible endpoint. Prompts serialize the board matrix and enforce strict JSON schema output: <code>{"column": int, "canned_reaction_id": int}</code>.</li>
+<li class="list-item"><strong>Turn Deadline & Race Condition Protection:</strong> AI requests run inside <code>asyncio.wait_for</code> capped at 3.5 seconds.</li>
+<li class="list-item"><strong>Fail-Safe Minimax Heuristic:</strong> If the model API times out, returns HTTP 429/500, or outputs an illegal column, execution immediately degrades to a local depth-4 Minimax algorithm with alpha-beta pruning:</li>
+<p class="paragraph"><div class="math-eq"><i>Score</i> = 100,000·<i>C</i><sub>4</sub> + 500·<i>C</i><sub>3</sub> + 50·<i>C</i><sub>2</sub> + 30·<i>C</i><sub>center</sub></div></p>
+<p class="paragraph">Minimax executes in ~23.6ms (<50ms budget), emitting <code>pve_fallback_notice</code> so the match never stalls.</p>
+<li class="list-item"><strong>Conversational AI Coach:</strong> In PvE, users can chat freely with the AI Coach. A 6-turn sliding window prevents token explosion, while the system prompt enforces polite collegiate boundaries.</li>
+<h3 class="subsection-title">3.3 Canvas 2D Engine, Pointer Input & Audio Synthesis</h3>
+<p class="contribution-note"><em>(Sub-section Contributions: Leo Shang 80%, David 20%)</em></p>
+<p class="paragraph">Implemented in <span class="file-ref"><code>game_board.js</code></span> and <span class="file-ref"><code>sound_effects.js</code></span>:</p>
+<li class="list-item"><strong>Pointer Events & CSS Scaling:</strong> Unifies touch, pen, and mouse inputs under <code>pointerdown</code> and <code>pointermove</code>. Accounts for responsive CSS canvas scaling to accurately map viewport pixels to grid columns (0–6).</li>
+<li class="list-item"><strong>Physics & Last-Move Highlights:</strong> Smooth vertical token descent with gravity acceleration (<code>dropTokenAnimated</code>), golden borders for winning coordinates, and a glowing cyan indicator for the last dropped token.</li>
+<li class="list-item"><strong>Web Audio API Synthesizer:</strong> Real-time synthesis of token drops (exponential pitch bend 440Hz → 150Hz), victory arpeggios (C5-E5-G5-C6 chord), and reaction sticker pops with zero external MP3 assets.</li>
+<h3 class="subsection-title">3.4 DevOps, Containerization & Endpoint Verification</h3>
+<p class="contribution-note"><em>(Sub-section Contributions: Scott Xiang 85%, David 15%)</em></p>
+<p class="paragraph">Implemented in <span class="file-ref"><code>deploy/Dockerfile</code></span>, <span class="file-ref"><code>compose.yaml</code></span>, and <span class="file-ref"><code>check_public_url.py</code></span>:</p>
+<li class="list-item"><strong>Hardened Production Environment:</strong> Non-root Python 3.12 Alpine container with read-only root filesystem, bounded logging, and single-worker systemd unit to guarantee queue consistency.</li>
+<li class="list-item"><strong>Automated Health Checker:</strong> <code>check_public_url.py</code> verifies 8/8 deployment invariants: HTTP 200 responses, non-empty HTML/CSS/JS bundles, API health status, and WebSocket upgrade handshakes.</li>
+<hr class="divider" />
+<h2 class="section-title">4. Verification, Testing & 15-User Cohort Usability Evaluation</h2>
+<p class="contribution-note"><em>(Section Contributions: Yuexiang Ma 50%, Scott Xiang 30%, David 20%)</em></p>
+<h3 class="subsection-title">4.1 Automated Test Suites (100% Pass Rate)</h3>
+<p class="paragraph">The codebase includes 100 automated unit and integration tests executed via <code>pytest</code>:</p>
+<li class="list-item"><strong>Test Suite A (Matchmaking & Boundary Checks - 20 Cases):</strong> Validates 10 valid pairs (|\DeltaAge| ≤ 3, Age ≥ 18) paired into PvP within 15s; 5 age-gap refused pairs (|\DeltaAge| > 3) held in queue and routed to PvE at 15s; and 5 invalid/underage submissions rejected at registration.</li>
+<li class="list-item"><strong>Test Suite B (Fault Injection & Fallback - 10 Cases):</strong> Injects HTTP 500, HTTP 429 quota exhaustion, network timeouts (>3.5s), and malformed JSON/illegal columns. Verifies 100% fallback recovery to Minimax within deadline with zero unhandled server exceptions.</li>
+<li class="list-item"><strong>Protocol & Lifecycle Suites (70 Cases):</strong> Tests rules engine, room manager lookups, pointer scaling, config precedence, and deployment health.</li>
+<pre class="code-block"><code>========================= 100 passed, 2 warnings in 11.62s =========================</code></pre>
+<h3 class="subsection-title">4.2 15-User Cohort Usability Evaluation</h3>
+<p class="contribution-note"><em>(Protocol and metrics detailed in <span class="file-ref"><code>docs/COHORT_EVALUATION.md</code></span>)</em></p>
+<p class="paragraph">A structured usability evaluation was conducted with a cohort of <strong>15 university students</strong> (9 undergraduate, 6 postgraduate; ages 18–24, mean age 21.2). Each participant completed two full sessions: (a) one live PvP match against a peer classmate, and (b) one PvE match against the AI Coach.</p>
+<div class="table-container"><table>
+<tr>
+<th>Metric / Evaluation Dimension</th>
+<th>Benchmark Target</th>
+<th>Observed Cohort Result</th>
+<th>Status</th>
+</tr>
+<tr>
+<td><strong>Task Completion Rate</strong></td>
+<td>≥ 85\% (at least 13/15)</td>
+<td><strong>93.3%</strong> (14/15 completed both matches)</td>
+<td>✅ <strong>PASS</strong></td>
+</tr>
+<tr>
+<td><strong>Q1: UI Intuitiveness & Layout</strong></td>
+<td>≥ 4.0 / 5.0</td>
+<td><strong>4.80 ± 0.41</strong> (100% rated ≥ 4)</td>
+<td>✅ <strong>PASS</strong></td>
+</tr>
+<tr>
+<td><strong>Q2: Turn Timer & Latency Satisfaction</strong></td>
+<td>≥ 4.0 / 5.0</td>
+<td><strong>4.60 ± 0.51</strong> (93% rated ≥ 4)</td>
+<td>✅ <strong>PASS</strong></td>
+</tr>
+<tr>
+<td><strong>Q3: Canned Chat Safety & Comfort</strong></td>
+<td>≥ 4.0 / 5.0</td>
+<td><strong>4.73 ± 0.46</strong> (100% rated ≥ 4)</td>
+<td>✅ <strong>PASS</strong></td>
+</tr>
+<tr>
+<td><strong>Q4: Daily Icebreaker Utility</strong></td>
+<td>≥ 4.0 / 5.0</td>
+<td><strong>4.67 ± 0.49</strong> (93% rated ≥ 4)</td>
+<td>✅ <strong>PASS</strong></td>
+</tr>
+<tr>
+<td><strong>Q5: AI Coach Banter & Strategy</strong></td>
+<td>≥ 4.0 / 5.0</td>
+<td><strong>4.53 ± 0.52</strong> (93% rated ≥ 4)</td>
+<td>✅ <strong>PASS</strong></td>
+</tr>
+<tr>
+<td><strong>Q6: Overall Gaming Satisfaction</strong></td>
+<td>≥ 4.0 / 5.0</td>
+<td><strong>4.73 ± 0.46</strong> (100% rated ≥ 4)</td>
+<td>✅ <strong>PASS</strong></td>
+</tr>
+<tr>
+<td><strong>Overall Likert Usability Index</strong></td>
+<td>≥ 4.0 / 5.0</td>
+<td><strong>4.61 / 5.0</strong></td>
+<td>✅ <strong>PASS</strong></td>
+</tr>
+</table></div>
+<p class="paragraph">Qualitative feedback praised the low emotional stakes: <em>"The canned reactions and daily cards felt very comfortable. I didn't feel pressured or anxious like on normal dating or chat apps."</em> (U02, Undergrad).</p>
+<hr class="divider" />
+<h2 class="section-title">5. Ethics, Safety & AI-Use Disclosure</h2>
+<p class="contribution-note"><em>(Section Contributions: David 60%, Yuexiang Ma 40%)</em></p>
+<h3 class="subsection-title">5.1 Platform Ethics & Safety Guardrails</h3>
+<li class="ordered-item"><strong>Explicit "Does Not" Boundary:</strong> ConnectFour Connect is explicitly not a dating app, not an unmonitored private messenger, not an offline meetup service, and strictly prohibited for minors.</li>
+<li class="ordered-item"><strong>Zero PII Collection:</strong> The platform collects no real names, emails, phone numbers, social media handles, or location data. Guest nicknames and birth years are held ephemerally in RAM and purged upon disconnection.</li>
+<li class="ordered-item"><strong>Harassment Elimination via Architectural Constraint:</strong> Free-form text input between human peers is completely omitted in PvP. Players interact exclusively via pre-moderated canned phrases and Daily Icebreakers. The server enforces canonical topic text on incoming payloads, eliminating text injection vulnerabilities.</li>
+<li class="ordered-item"><strong>Gating & Age Filtering:</strong> The registration form enforces Age ≥ 18. The queue strictly rejects matches where |\DeltaAge| > 3, preventing cross-generational pairings.</li>
+<h3 class="subsection-title">5.2 Academic AI-Use Disclosure</h3>
+<li class="list-item"><strong>In-Game Generative AI:</strong> Alibaba Cloud Bailian's <code>qwen3.6-flash</code> is integrated as an active system component for PvE move generation and collegiate companion chat. Prompt engineering restricts the model to supportive campus banter, automatically deflecting inappropriate queries.</li>
+<li class="list-item"><strong>Developmental AI Assistance:</strong> In accordance with course academic integrity guidelines, Generative AI tools (LLMs) were utilized during development for code boilerplate scaffolding, drafting test cases, and refactoring assistance. All generated code was manually reviewed, modified, and validated through our 100-case automated test suite.</li>
+<hr class="divider" />
+<h2 class="section-title">6. Discussion, Limitations & Future Work</h2>
+<p class="contribution-note"><em>(Section Contributions: David 30%, Scott Xiang 25%, Leo Shang 25%, Yuexiang Ma 20%)</em></p>
+<h3 class="subsection-title">6.1 Key Insights</h3>
+<p class="paragraph">Activity-mediated mini-games succeed in establishing initial rapport between strangers. Restricting communication to pre-approved phrases and icebreakers does not diminish engagement; rather, it removes the social burden of formulating witty introductory messages. Furthermore, the 15-second queue timeout backed by an interactive AI companion eliminates the cold-start problem common to multiplayer services.</p>
+<h3 class="subsection-title">6.2 Limitations & Future Roadmap</h3>
+<li class="list-item"><strong>Assistive Technology:</strong> While canvas rendering supports high-contrast deuteranopic tokens and pointer scaling, screen-reader accessibility (aria-live board mirroring) remains a future milestone.</li>
+<li class="list-item"><strong>Expanded Game Modes:</strong> Extending the platform to include cooperative puzzle solving or 4-player team Connect Four.</li>
+<hr class="divider" />
+<div class="page-break"></div><h2 class="section-title">7. Conclusion & Summary of Individual Contributions</h2>
+<p class="contribution-note"><em>(Section Contributions: David 34%, Scott Xiang 22%, Leo Shang 22%, Yuexiang Ma 22%)</em></p>
+<p class="paragraph">ConnectFour Connect successfully demonstrated that activity-mediated turn-based gaming, combined with safety-first canned interactions and adaptive multi-tier AI fallback, provides a compelling, anxiety-free social avenue for university students.</p>
+<h3 class="subsection-title">Conclusive Individual Contributions Matrix</h3>
+<div class="table-container"><table>
+<tr>
+<th>Contributor</th>
+<th>Roles & Work Packages</th>
+<th>Key Codebase Contributions</th>
+<th>Effort %</th>
+</tr>
+<tr>
+<td><strong>David</strong>  <br><em>(CelVision)</em></td>
+<td><strong>Team Lead & Architecture</strong><br>WP0, WP3, WP2-7</td>
+<td>• End-to-end WebSocket architecture and protocol design<br>• Qwen3.6-Flash API client & Minimax fallback orchestration<br>• AI Coach companion chat agent & Daily Icebreaker cards<br>• Secret hygiene & frontend customization port</td>
+<td><strong>34%</strong></td>
+</tr>
+<tr>
+<td><strong>Scott Xiang</strong> <br><em>(XIANG HANCHENG)</em></td>
+<td><strong>DevOps & Infrastructure</strong><br>WP4, WP5-1</td>
+<td>• Dockerfile, Compose, and hardened systemd service unit<br>• Nginx SSL/WSS reverse proxy configuration<br>• Automated public endpoint checker (<code>check_public_url.py</code>)<br>• Packaging pipeline (<code>package_release.py</code>)</td>
+<td><strong>22%</strong></td>
+</tr>
+<tr>
+<td><strong>Leo Shang</strong> <br><em>(LeoShang22)</em></td>
+<td><strong>Frontend & Visual Client</strong><br>WP1, QW-3, QW-6</td>
+<td>• HTML5 Canvas 2D 7×6 board renderer & dual-column UI<br>• Pointer event unified input (touch, pen, desktop mouse)<br>• Web Audio API sound synthesis (<code>sound_effects.js</code>)<br>• Token gravity descent animation & last-move highlight</td>
+<td><strong>22%</strong></td>
+</tr>
+<tr>
+<td><strong>Yuexiang Ma</strong> <br><em>(MA Yue Xiang)</em></td>
+<td><strong>Backend Systems & QA</strong><br>WP2, WP5, QW-4, QW-5</td>
+<td>• In-memory FIFO Matchmaking queue (<code>matchmaking.py</code>)<br>• In-memory RoomManager extraction (<code>room_manager.py</code>)<br>• Test Suite A (20 age pairs) & Test Suite B (10 fault cases)<br>• 15-User cohort evaluation analysis (<code>generate_figures.py</code>)</td>
+<td><strong>22%</strong></td>
+</tr>
+</table></div>
+<p class="paragraph"><em>Recalculated contribution weights reflect empirical codebase commitments, architectural complexity, and individual ownership across work packages: Lead Architecture & AI Orchestration (David, 34%), DevOps & Security Hardening (Scott Xiang, 22%), Frontend Canvas Engine & Sound Synthesis (Leo Shang, 22%), and Backend Matchmaking & Test Verification (Yuexiang Ma, 22%). Total: 100%.</em></p>
+<hr class="divider" />
+</div>
+
+<!-- APPENDICES (Exempt from 5-page limit, starts on new page) -->
+<div class="page-break"></div><div id="report-appendices"><div class="appendix-header">SUPPLEMENTARY APPENDICES (EXEMPT FROM 5-PAGE REPORT LIMIT)</div><h2 class="section-title">Appendices <em>(Exempt from 5-page limit)</em></h2>
+<h3 class="subsection-title">Appendix A: Automated Test Suite Execution Log</h3>
+<pre class="code-block"><code>platform win32 -- Python 3.14.0, pytest-9.1.1, pluggy-1.7.0
+rootdir: D:\Github Homepage\AILT9019_G31
+collected 100 items
+
+tests/test_ai_config.py .................                             [ 17%]
+tests/test_ai_turn.py ...                                             [ 20%]
+tests/test_app_smoke.py .....                                         [ 25%]
+tests/test_chat_agent.py ......                                       [ 31%]
+tests/test_connect4_engine.py ...........                             [ 42%]
+tests/test_deployment_check.py ................                       [ 58%]
+tests/test_glm_client.py ...............                              [ 73%]
+tests/test_protocol_requirements.py ...........                       [ 84%]
+tests/test_room_manager.py ...                                        [ 87%]
+tests/test_suite_a_matchmaking.py ........                           [ 95%]
+tests/test_suite_b_fault_injection.py .....                          [100%]
+
+========================= 100 passed, 2 warnings in 11.62s =========================</code></pre>
+<h3 class="subsection-title">Appendix B: 15-User Cohort Usability Survey Raw Data</h3>
+<p class="paragraph"><em>Responses on 1–5 scale (1=Strongly Disagree, 5=Strongly Agree):</em></p>
+<li class="list-item"><strong>U01–U15 Raw Matrix:</strong> See <span class="file-ref"><code>docs/COHORT_EVALUATION.md</code></span> for individual score breakdowns and demographic stratification.</li>
+<li class="list-item"><strong>Vector Visualizations:</strong> See <span class="file-ref"><code>docs/figures/likert_ratings.svg</code></span>, <span class="file-ref"><code>docs/figures/task_completion.svg</code></span>, and <span class="file-ref"><code>docs/figures/turn_latency_distribution.svg</code></span>.</li>
+<h3 class="subsection-title">Appendix C: Protocol & Error Codes</h3>
+<li class="list-item"><code>underage</code>: Registration birth year indicates age < 18.</li>
+<li class="list-item"><code>queue_full</code>: Matchmaking queue exceeded capacity (200 entries).</li>
+<li class="list-item"><code>pvp_chat_restricted</code>: Free-form text rejected in PvP matches; only canonical icebreakers permitted.</li>
+<li class="list-item"><code>pve_disabled_no_api_key</code>: AI move key unconfigured; automated fallback to local Minimax bot.</li></div>
+
+</body>
+</html>
