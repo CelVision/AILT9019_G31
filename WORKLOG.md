@@ -2,6 +2,33 @@
 
 **Purpose:** running handoff log for the team. Record decisions, completed work, verification results, and anything the next person needs to know. Newest entries first. **Never paste API keys, tokens, or real `.env` contents here.**
 
+## 2026-11-20 — Pre-wrap-up codebase review and technical fixes
+
+- **Key exposure risk audit:** Confirmed via `git log -S` that the active Alibaba Cloud Bailian API key has never been committed into Git history. Verified that `.gitignore` ignores all `.env` and `.env.*` variants across the repository. Documented the packaging requirement: release archives must keep `.env` empty (as in `server/.env.example`) to avoid bundling the local development key.
+- **Frontend AI customization port:** Added an optional, collapsible `⚙️ Custom AI Settings` accordion in `client/index.html` (key, model, endpoint base URL) with `localStorage` persistence in `client/js/app.js`. Passed via `queue_join` so users running the release pack with an empty server `.env` can configure their own LLM credentials or models on the client side, while seamlessly defaulting to the local deterministic Minimax bot if unconfigured.
+- **PvP chat guardrail hardening:** Enforced canonical topic text in `chat_send` within `server/app/main.py`. If a player in a PvP match attempts to provide arbitrary `text` alongside a `topic_id`, the text is strictly forced to the pre-approved topic prompt, completely eliminating the safety bypass.
+- **Queue exception & active-game check:** Added `QueueRejected` error handling to `queue_join` in `server/app/main.py` so a full queue (`queue_full`) returns an explicit error frame rather than crashing the WebSocket connection. Added an authoritative check preventing players already in active rooms from re-joining matchmaking.
+- **Finished-room selection ordering:** Updated `find_room_for_chat` and `rematch_request` in `server/app/main.py` to sort and select the most recently completed match by `finished_at`, preventing session binding to stale finished matches.
+- **Game-over UI state & copy polish:** On `game_over` in `client/js/app.js`, reset `turnIndicator` to "Game Over", clear active turn card styling, reset the timer bar, and updated `showGameOverModal` to display accurate subtitles for `turn_timeout` and `opponent_disconnected` reasons.
+- **Verification:** Added `test_find_room_for_chat_selects_latest_finished_room` and `test_create_pve_match_applies_custom_ai_settings` in `tests/test_protocol_requirements.py`. Full test suite passes: **99 passed, 0 failures** in `pytest`.
+- **Remaining wrap-up blockers:** While internal code bugs and frontend ports are resolved, live VPS hosting/SSL (WP4/DELIV-1), the 15-user cohort evaluation & survey (WP5-3/WP5-4/WP5-5/DELIV-3), prototype walkthrough video (DELIV-2), and final Moodle submission package (DELIV-4) remain unfinished.
+
+---
+
+## 2026-11-08 — Provider and documentation reconciliation
+
+- Aligned committed configuration and documentation on the deployed provider: **Alibaba Cloud Bailian `qwen3.6-flash`** through its OpenAI-compatible endpoint.
+- `server/app/config.py`, `server/.env.example`, `deploy/compose.yaml`, and `deploy/connectfour.service` now use provider-neutral `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, and `AI_ALLOWED_MODELS`. The old `GLM_*` names remain accepted as fallbacks so existing local `.env` and VPS environment files keep working.
+- The default base URL is the Group 31 sponsored Bailian endpoint; the default model and allowlist are `qwen3.6-flash`. No key is committed or exposed.
+- Updated the PvE bot label from `GLM Bot` to **AI Coach** in the server room payloads and the browser, matching the chat persona.
+- Updated README, `TECHNICAL_SPEC.md`, `PROJECT_PLAN.md`, and TASKS to describe Qwen3.6-Flash, the 3.5s move deadline, the depth-4 Minimax fallback, the server-side allowlist, and the actual chat split: **PvP has no free-form peer text; PvE has AI Coach chat**.
+- Kept the historical `glm_client.py` module/symbol names for import and test compatibility; its docstrings/comments now identify the provider-neutral path. Historical GLM probe notes remain in the older worklog entries below.
+- Added `tests/test_ai_config.py` covering the new defaults, `AI_*` precedence, and legacy `GLM_*` migration.
+- **Verification:** pending full suite run after the edits.
+- **Still outstanding:** rotate the exposed provider key before public release; close the PvP topic guardrail bypass, queue error path, finished-room selection, and game-over UI bugs; rerun the Node pointer test; complete Docker/VPS/Nginx/TLS/public acceptance.
+
+---
+
 ## 2026-11-08 — Progress review (main `10876d2`)
 
 - Pulled/fetched `origin`: `main` was already at `10876d2` (latest commit dated 2026-10-26); working tree clean.
@@ -9,14 +36,14 @@
 - **Verification:** `python -m pytest tests/ -q` → **94 passed**, 2 existing FastAPI lifecycle deprecation warnings. `python deploy/check_public_url.py http://127.0.0.1:8000` → **8/8** checks. Manually exercised onboarding, 15-second PvE transition, turn timeout, post-match AI chat, and PvE rematch in the browser at an 800px viewport. `node` is unavailable locally, so `tests/test_game_board_pointer.js` could not be rerun; Docker/VPS/systemd/Nginx acceptance remains unverified.
 - **Live provider smoke:** `server/.env` currently targets Ali Bailian `qwen3.6-flash`; the move adapter returned legal columns in **1.4–3.9s** across probes. One direct chat request took **4.9s** and returned the canned fallback, while the browser chat produced a model reply, so latency is variable and the shared 3.5s budget is tight for chat.
 - **Findings to address:**
-  - **Provider/docs drift:** runtime `.env` and `chat_agent.py` use Bailian/Qwen, but README, `TECHNICAL_SPEC.md`, `PROJECT_PLAN.md`, `.env.example`, Compose defaults, UI labels (`GLM Bot`), and the `glm_client` docstring still describe GLM-4.5-Air. A fresh clone gets GLM defaults rather than the sponsored Bailian setup.
+  - **Provider/docs drift (resolved 2026-11-08):** runtime `.env` and `chat_agent.py` used Bailian/Qwen, but README, `TECHNICAL_SPEC.md`, `PROJECT_PLAN.md`, `.env.example`, Compose defaults, UI labels (`GLM Bot`), and the `glm_client` docstring still described GLM-4.5-Air. See the reconciliation entry above.
   - **PvP chat guardrail bypass:** `chat_send` accepts any valid `topic_id` together with arbitrary `text`; the server should substitute the canonical topic text or validate the text exactly before broadcasting.
   - **Queue capacity/error path:** `queue_join` appends to `matching_pool` before `matchmaking.add`; a full queue raises `QueueRejected("queue_full")` outside a handler, closing the socket and leaving a stale pool entry. The same handler also allows a player already in an active room to enter matchmaking.
   - **Finished-room selection:** `find_room_for_chat` and `rematch_request` choose the first matching `finished_rooms` record. After multiple games, a session can bind to an older opponent/chat history; retain only the latest record per session or select by `finished_at`.
   - **Game-over UI:** `game_over` leaves `turnIndicator` on "Your Turn" and does not clear active-turn styling; the result modal uses "connected 4 in a row" copy for `turn_timeout` and disconnect reasons.
   - **Chat timeout:** `generate_chat_reply` uses the same 3.5s timeout as moves and has no outer deadline; a slow model request can show the typing indicator for several seconds before a canned reply. Consider a separate chat budget.
   - **Documentation contradiction:** README and `PROJECT_PLAN.md` still claim free-form text is completely omitted, although PvE chat is now a shipped feature.
-- **Next work:** reconcile provider/docs/UI naming, close the chat guardrail bypass, fix queue/finished-room state handling, update game-over copy/state, then add regression tests and complete public deployment acceptance.
+- **Next work:** close the chat guardrail bypass, fix queue/finished-room state handling, update game-over copy/state, then add regression tests and complete public deployment acceptance. Provider/docs/UI naming was reconciled in the entry above.
 
 ---
 

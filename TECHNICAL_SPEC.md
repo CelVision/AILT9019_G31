@@ -49,7 +49,7 @@ The system follows a lightweight, real-time client-server architecture designed 
 │              ┌──────────────────────┴──────────────────────┐           │
 │              ▼                                             ▼           │
 │  ┌───────────────────────────────┐           ┌──────────────────────┐  │
-│  │ Primary AI: GLM-4.5-Air       │           │ Fallback AI: Minimax │  │
+│  │ Primary AI: Qwen3.6-Flash     │           │ Fallback AI: Minimax │  │
 │  │ • Structured JSON Schema      │           │ • Alpha-Beta Pruning │  │
 │  │ • Latency Budget: < 3.5s      │ ──[Fail]─►│ • Deterministic      │  │
 │  │ • Canned Social Reaction Pick │           │ • Latency: < 50ms    │  │
@@ -316,12 +316,12 @@ If `move_count == 42` and no 4-in-a-row exists, set `winner = 0` (Draw).
 ```mermaid
 flowchart TD
     Start["AI Turn Triggered"] --> Serialize["Serialize 7x6 Board Matrix & Legal Columns"]
-    Serialize --> GLMReq["Dispatch Prompt to GLM-4.5-Air API (3.5s Deadline)"]
-    
-    GLMReq --> CheckRes{Response Received < 3.5s?}
+    Serialize --> AIReq["Dispatch Prompt to Qwen3.6-Flash API (3.5s Deadline)"]
+
+    AIReq --> CheckRes{Response Received < 3.5s?}
     CheckRes -- Yes --> ValidateJSON{Valid JSON & Legal Column?}
     ValidateJSON -- Yes --> CommitMove["Commit Move & Broadcast Reaction"]
-    
+
     CheckRes -- No (Timeout/500/429) --> Fallback["Trigger Local Deterministic Minimax (<50ms)"]
     ValidateJSON -- No (Malformed) --> Fallback
     
@@ -329,8 +329,9 @@ flowchart TD
     NotifyClient --> CommitMove
 ```
 
-### 5.1 Primary AI: GLM-4.5-Air
-- **API Target**: GLM-4.5-Air through the provider's OpenAI-compatible REST API.
+### 5.1 Primary AI: Qwen3.6-Flash
+- **API Target**: `qwen3.6-flash` through Alibaba Cloud Bailian's OpenAI-compatible REST API. The server reads `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, and `AI_ALLOWED_MODELS`; legacy `GLM_*` names remain accepted during migration.
+- **Model Allowlist**: The server accepts only models in `AI_ALLOWED_MODELS` (default: `qwen3.6-flash`). The browser never receives the API key, and the current UI does not expose model selection.
 - **Output Format Constraint**: Strict JSON Schema:
 ```json
 {
@@ -361,9 +362,9 @@ Respond STRICTLY with the requested JSON schema.
 
 ### 5.2 Deterministic Minimax Fallback Bot
 - **Activation Criteria**: Triggered immediately if:
-  1. GLM API fails to return within 3.5 seconds.
-  2. GLM API returns HTTP 429 (rate limit) or HTTP 500 (internal error).
-  3. GLM returns an invalid or full column index.
+  1. The primary AI API fails to return within 3.5 seconds.
+  2. The primary AI API returns HTTP 429 (rate limit) or HTTP 500 (internal error).
+  3. The primary AI returns an invalid or full column index.
 - **Algorithm**:
   - Minimax with Alpha-Beta Pruning (Search Depth: 4).
   - **Evaluation Heuristic**:
@@ -400,7 +401,7 @@ $$|\text{Age}_A - \text{Age}_B| \le 3$$
 
 ## 7. Canned Social Interaction Palette
 
-To eliminate harassment, toxicity, and personal data leakage, users and AI agents communicate exclusively through a fixed palette:
+To eliminate harassment, toxicity, and personal data leakage between human peers, PvP communication uses the fixed palette below plus curated Daily Icebreakers. PvE adds a separate free-form channel with the AI Coach; human peer text remains disabled.
 
 ### 7.1 Preset Phrases (IDs 1–6)
 | ID | Preset Phrase | Semantic Context |
@@ -425,7 +426,7 @@ To eliminate harassment, toxicity, and personal data leakage, users and AI agent
 To satisfy user interest in richer social dialogue while strictly maintaining the ethics and safety boundaries defined in Section 5 of the Proposal:
 
 #### 1. Architectural Mode Partitioning
-- **PvE Mode (Human vs. AI Bot)**: An interactive text chatting bar is enabled. Players can type conversational messages directly to `AI Coach` (GLM-4.5-Air). Because the opponent is an AI agent, there is zero risk of interpersonal harassment, offensive contact sharing, or minor exploitation.
+- **PvE Mode (Human vs. AI Bot)**: An interactive text chatting bar is enabled. Players can type conversational messages directly to `AI Coach` (Qwen3.6-Flash through Alibaba Cloud Bailian). Because the opponent is an AI agent, there is zero risk of interpersonal harassment, offensive contact sharing, or minor exploitation.
 - **PvP Mode (Human vs. Human)**: Free-form text chat remains omitted. Players instead have access to **"Daily Icebreaker Cards"**—a curated, rotating selection of 4 positive daily conversation starters (e.g. *"What's your favorite spot on campus?"*, *"How are your midterms going?"*, *"Coffee or tea?"*). Tapping an icebreaker broadcasts it as a safe conversation card.
 
 #### 2. WebSocket Protocol Schema
@@ -456,7 +457,7 @@ To satisfy user interest in richer social dialogue while strictly maintaining th
 1. **Length Limit**: Messages capped at 140 characters.
 2. **Rate Limiting**: Maximum 1 message per 3 seconds per client.
 3. **Context Memory**: In PvE, the server retains at most the last 6 messages per match in ephemeral RAM to prevent token blowup.
-4. **Prompt Guardrail**: GLM system prompt instructs the model to act as a warm, encouraging university classmate, refusing any romantic advances, personal contact requests, or toxic queries.
+4. **Prompt Guardrail**: The AI Coach system prompt instructs the model to act as a warm, encouraging university classmate, refusing any romantic advances, personal contact requests, or toxic queries.
 
 ---
 
@@ -493,10 +494,10 @@ To satisfy user interest in richer social dialogue while strictly maintaining th
 
 | Test ID | Injected Fault Type | Simulation Mechanism | Expected System Response | Latency Bound |
 | :---: | :--- | :--- | :--- | :---: |
-| **B-01** | HTTP 500 Internal Error | Mock GLM client throws `500 Server Error` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
-| **B-02** | HTTP 500 Internal Error | Mock GLM client throws `500 Server Error` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
-| **B-03** | HTTP 429 Quota Exhaustion | Mock GLM client throws `RateLimitError` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
-| **B-04** | HTTP 429 Quota Exhaustion | Mock GLM client throws `RateLimitError` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-01** | HTTP 500 Internal Error | Mock AI client throws `500 Server Error` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-02** | HTTP 500 Internal Error | Mock AI client throws `500 Server Error` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-03** | HTTP 429 Quota Exhaustion | Mock AI client throws `RateLimitError` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
+| **B-04** | HTTP 429 Quota Exhaustion | Mock AI client throws `RateLimitError` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
 | **B-05** | Extreme Network Latency | Injected sleep `3.5s` on response | Timeout at 3.5s; Fallback to Minimax | $=3.5\text{s}$ |
 | **B-06** | Extreme Network Latency | Injected sleep `5.0s` on response | Timeout at 3.5s; Fallback to Minimax | $=3.5\text{s}$ |
 | **B-07** | Malformed JSON String | Returns `"I choose column three"` | Fallback to Minimax; notify client | $<3.5\text{s}$ |
@@ -517,13 +518,14 @@ AILT9019_G31/
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── main.py                     # ASGI Entrypoint & WebSocket Router
-│   │   ├── config.py                   # Environment & GLM API Settings
+│   │   ├── config.py                   # Environment-backed AI settings
 │   │   ├── game_engine.py              # 7x6 Connect Four Physics & Rules
 │   │   ├── matchmaking.py              # In-memory FIFO Queue & Age Filter
 │   │   ├── room_manager.py             # Active Room Lifecycle & Session State
 │   │   ├── ai/
 │   │   │   ├── __init__.py
-│   │   │   ├── glm_client.py           # GLM-4.5-Air JSON Integration
+│   │   │   ├── glm_client.py           # Qwen3.6-Flash JSON Integration
+│   │   │   ├── chat_agent.py           # AI Coach Chat & Daily Icebreakers
 │   │   │   └── minimax_fallback.py     # Deterministic Heuristic Bot
 │   │   └── schemas.py                  # Pydantic Protocol Envelopes
 │   └── requirements.txt                # FastAPI, Uvicorn, httpx, websockets

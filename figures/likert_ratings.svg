@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420" style="background:#0b1329; font-family:system-ui, -apple-system, sans-serif;">
+<!-- Title -->
+<text x="380.0" y="36" fill="#f8fafc" font-size="18" font-weight="700" text-anchor="middle">Cohort Evaluation: 5-Point Likert Usability Ratings (N=15)</text>
+<!-- Grid Lines -->
+<line x1="348.0" y1="60" x2="348.0" y2="360" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4"/>
+<text x="348.0" y="382" fill="#94a3b8" font-size="12" text-anchor="middle">1.0</text>
+<line x1="436.0" y1="60" x2="436.0" y2="360" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4"/>
+<text x="436.0" y="382" fill="#94a3b8" font-size="12" text-anchor="middle">2.0</text>
+<line x1="524.0" y1="60" x2="524.0" y2="360" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4"/>
+<text x="524.0" y="382" fill="#94a3b8" font-size="12" text-anchor="middle">3.0</text>
+<line x1="612.0" y1="60" x2="612.0" y2="360" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4"/>
+<text x="612.0" y="382" fill="#94a3b8" font-size="12" text-anchor="middle">4.0</text>
+<line x1="700.0" y1="60" x2="700.0" y2="360" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4"/>
+<text x="700.0" y="382" fill="#94a3b8" font-size="12" text-anchor="middle">5.0</text>
+<line x1="612.0" y1="60" x2="612.0" y2="360" stroke="#eab308" stroke-width="2.5" stroke-dasharray="6,4"/>
+<text x="612.0" y="48" fill="#eab308" font-size="12" font-weight="600" text-anchor="middle">Benchmark Target (≥4.0)</text>
+<text x="245" y="83.0" fill="#e2e8f0" font-size="13" font-weight="500" text-anchor="end">UI Intuitiveness & Board Layout</text>
+<rect x="260" y="60" width="410.6666666666667" height="36" rx="6" fill="#0284c7"/>
+<text x="658.6666666666667" y="83.0" fill="#ffffff" font-size="12" font-weight="700" text-anchor="end">4.67 ± 0.49</text>
+<text x="245" y="141.0" fill="#e2e8f0" font-size="13" font-weight="500" text-anchor="end">Turn Timer & Latency Satisfaction</text>
+<rect x="260" y="118" width="398.93333333333334" height="36" rx="6" fill="#0284c7"/>
+<text x="646.9333333333334" y="141.0" fill="#ffffff" font-size="12" font-weight="700" text-anchor="end">4.53 ± 0.52</text>
+<text x="245" y="199.0" fill="#e2e8f0" font-size="13" font-weight="500" text-anchor="end">Canned Social Chat Comfort & Safety</text>
+<rect x="260" y="176" width="410.6666666666667" height="36" rx="6" fill="#0284c7"/>
+<text x="658.6666666666667" y="199.0" fill="#ffffff" font-size="12" font-weight="700" text-anchor="end">4.67 ± 0.49</text>
+<text x="245" y="257.0" fill="#e2e8f0" font-size="13" font-weight="500" text-anchor="end">Daily Icebreaker Card Utility</text>
+<rect x="260" y="234" width="404.79999999999995" height="36" rx="6" fill="#0284c7"/>
+<text x="652.8" y="257.0" fill="#ffffff" font-size="12" font-weight="700" text-anchor="end">4.60 ± 0.51</text>
+<text x="245" y="315.0" fill="#e2e8f0" font-size="13" font-weight="500" text-anchor="end">AI Coach Banter & Strategic Play</text>
+<rect x="260" y="292" width="398.93333333333334" height="36" rx="6" fill="#0284c7"/>
+<text x="646.9333333333334" y="315.0" fill="#ffffff" font-size="12" font-weight="700" text-anchor="end">4.53 ± 0.52</text>
+<text x="245" y="373.0" fill="#e2e8f0" font-size="13" font-weight="500" text-anchor="end">Overall Social Gaming Satisfaction</text>
+<rect x="260" y="350" width="410.6666666666667" height="36" rx="6" fill="#0284c7"/>
+<text x="658.6666666666667" y="373.0" fill="#ffffff" font-size="12" font-weight="700" text-anchor="end">4.67 ± 0.49</text>
+</svg>

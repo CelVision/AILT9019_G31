@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-20 — Pre-wrap-up technical bug fixes and review
+
+- Key exposure audit: verified zero API keys committed in Git history; confirmed `.gitignore` coverage.
+- Added frontend custom AI configuration port (custom key, model, base URL) on the onboarding modal to allow user evaluation with an empty server `.env`.
+- Fixed PvP chat guardrail bypass by forcing canonical topic text on all PvP messages.
+- Added active-game check and `QueueRejected` error handling to `queue_join` in `server/app/main.py`.
+- Fixed `find_room_for_chat` and `rematch_request` to pick the latest finished match by `finished_at`.
+- Fixed game-over UI indicator state and modal subtitle copy for timeout and opponent disconnection.
+- Added regression tests in `tests/test_protocol_requirements.py`; test suite expanded to 99 passing tests.
+
+## 2026-11-08 — Provider and documentation reconciliation
+
+- Aligned runtime defaults and deployment templates on Alibaba Cloud Bailian `qwen3.6-flash` through an OpenAI-compatible endpoint.
+- Added provider-neutral `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, and `AI_ALLOWED_MODELS` settings; legacy `GLM_*` names remain accepted during migration.
+- Renamed user-facing PvE opponent labels to **AI Coach** and documented PvP/PvE chat boundaries accurately.
+- Updated README, technical specification, project plan, task board, and worklog. Added AI configuration regression tests.
+- No API key was added to tracked files.
+
 ## 2026-10-26 — Touchscreen column selection
 
 Contribution area: QW-3, frontend input.

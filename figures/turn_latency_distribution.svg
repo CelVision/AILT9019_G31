@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="320" viewBox="0 0 620 320" style="background:#0b1329; font-family:system-ui, -apple-system, sans-serif;">
+<text x="310.0" y="34" fill="#f8fafc" font-size="17" font-weight="700" text-anchor="middle">PvE AI Response Latency Profile (Seconds)</text>
+<!-- Deadline line at 3.5s -->
+<line x1="460" y1="60" x2="460" y2="260" stroke="#ef4444" stroke-width="2" stroke-dasharray="5"/>
+<text x="460" y="52" fill="#ef4444" font-size="11" font-weight="600" text-anchor="middle">Hard Deadline (3.5s)</text>
+<!-- Move Latency -->
+<text x="60" y="105" fill="#e2e8f0" font-size="13" font-weight="600">Qwen3.6-Flash Move:</text>
+<rect x="220" y="85" width="180" height="30" rx="6" fill="#38bdf8"/>
+<text x="310" y="105" fill="#0f172a" font-size="12" font-weight="700" text-anchor="middle">1.4s – 2.9s</text>
+<!-- Minimax Fallback -->
+<text x="60" y="165" fill="#e2e8f0" font-size="13" font-weight="600">Minimax Depth-4 Bot:</text>
+<rect x="220" y="145" width="25" height="30" rx="6" fill="#10b981"/>
+<text x="255" y="165" fill="#10b981" font-size="12" font-weight="700">~23.6ms (Instant Fail-Safe)</text>
+<!-- AI Coach Chat -->
+<text x="60" y="225" fill="#e2e8f0" font-size="13" font-weight="600">AI Coach Banter Turn:</text>
+<rect x="220" y="205" width="220" height="30" rx="6" fill="#818cf8"/>
+<text x="330" y="225" fill="#ffffff" font-size="12" font-weight="700" text-anchor="middle">1.8s – 3.2s</text>
+</svg>
