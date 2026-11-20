@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-Generate publication-quality PDF from FINAL_PROJECT_REPORT.md using Playwright and Chrome.
+Generate publication-quality PDF from FINAL_PROJECT_REPORT.md matching
+AILT9019_Final_Report_Template.docx.
 Enforces the academic report constraint:
-- Body (Title, Abstract, Sections 1-7): <= 5 pages
+- Body (Sections 1-7): <= 5 pages
 - Appendices (Appendix A-C): Starts on new page (Page 6+)
+- Exports to both docs/report.pdf (official name) and docs/FINAL_PROJECT_REPORT.pdf
 """
 
 import sys
@@ -19,16 +21,17 @@ if not os.path.exists(CHROME_PATH):
 
 DOCS_DIR = Path(__file__).resolve().parent
 MD_PATH = DOCS_DIR / "FINAL_PROJECT_REPORT.md"
-PDF_PATH = DOCS_DIR / "FINAL_PROJECT_REPORT.pdf"
+PDF_REPORT_PATH = DOCS_DIR / "report.pdf"
+PDF_FINAL_PATH = DOCS_DIR / "FINAL_PROJECT_REPORT.pdf"
 HTML_PATH = DOCS_DIR / "FINAL_PROJECT_REPORT.html"
 
 
 def md_to_html(md_text: str) -> str:
     # Separate body and appendices
-    appendix_marker = "## Appendices"
+    appendix_marker = "## Appendix"
     if appendix_marker in md_text:
         body_text, appendix_text = md_text.split(appendix_marker, 1)
-        appendix_text = "## Appendices" + appendix_text
+        appendix_text = "## Appendix" + appendix_text
     else:
         body_text = md_text
         appendix_text = ""
@@ -70,14 +73,12 @@ def md_to_html(md_text: str) -> str:
             nonlocal in_code, code_lines, html_out
             if code_lines:
                 code_content = "\n".join(code_lines)
-                # escape html
                 code_content = code_content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 html_out.append(f'<pre class="code-block"><code>{code_content}</code></pre>')
             code_lines = []
             in_code = False
 
         def format_inline(line: str) -> str:
-            # KaTeX-like / math replacements
             line = line.replace(r'$$\text{Score} = 100{,}000 \cdot C_4 + 500 \cdot C_3 + 50 \cdot C_2 + 30 \cdot C_{\text{center}}$$ ',
                                 '<div class="math-eq"><i>Score</i> = 100,000·<i>C</i><sub>4</sub> + 500·<i>C</i><sub>3</sub> + 50·<i>C</i><sub>2</sub> + 30·<i>C</i><sub>center</sub></div>')
             line = line.replace(r'$$\text{Score} = 100{,}000 \cdot C_4 + 500 \cdot C_3 + 50 \cdot C_2 + 30 \cdot C_{\text{center}}$$',
@@ -90,7 +91,6 @@ def md_to_html(md_text: str) -> str:
             line = re.sub(r'\\text\{s\}', 's', line)
             line = line.replace(r'\to', '→')
             line = line.replace(r'\cdot', '·')
-            # Remove leftover math $ signs
             line = re.sub(r'\$([^\$]+)\$', r'\1', line)
 
             # Markdown links
@@ -131,28 +131,27 @@ def md_to_html(md_text: str) -> str:
                 continue
 
             # Headers
-            if stripped.startswith("# "):
-                html_out.append(f'<h1 class="report-title">{format_inline(stripped[2:])}</h1>')
-            elif stripped.startswith("## "):
-                sec_title = format_inline(stripped[3:])
-                if stripped.startswith("## 7."):
-                    html_out.append(f'<div class="page-break"></div><h2 class="section-title">{sec_title}</h2>')
-                else:
-                    html_out.append(f'<h2 class="section-title">{sec_title}</h2>')
+            if stripped.startswith("# AILT9019"):
+                html_out.append(f'<div class="header-pre">{format_inline(stripped[2:])}</div>')
+            elif stripped.startswith("## Final Report:"):
+                html_out.append(f'<h1 class="report-title">{format_inline(stripped[3:])}</h1>')
+            elif stripped.startswith("## ") and re.match(r'^##\s+(\d+\.|Appendix)', stripped):
+                sec_text = format_inline(stripped[3:])
+                html_out.append(f'<h2 class="section-title">{sec_text}</h2>')
             elif stripped.startswith("### "):
                 html_out.append(f'<h3 class="subsection-title">{format_inline(stripped[4:])}</h3>')
             elif stripped.startswith("---"):
                 html_out.append('<hr class="divider" />')
+            elif stripped.startswith("*") and stripped.endswith("*") and not stripped.startswith("**"):
+                # Template requirement grey note
+                html_out.append(f'<p class="template-req">{format_inline(stripped[1:-1])}</p>')
             elif stripped.startswith("* ") or stripped.startswith("- "):
                 html_out.append(f'<li class="list-item">{format_inline(stripped[2:])}</li>')
             elif re.match(r'^\d+\.\s+', stripped):
                 num_text = re.sub(r'^\d+\.\s+', '', stripped)
                 html_out.append(f'<li class="ordered-item">{format_inline(num_text)}</li>')
             else:
-                if stripped.startswith("*(") and stripped.endswith(")*"):
-                    html_out.append(f'<p class="contribution-note">{format_inline(stripped)}</p>')
-                else:
-                    html_out.append(f'<p class="paragraph">{format_inline(stripped)}</p>')
+                html_out.append(f'<p class="paragraph">{format_inline(stripped)}</p>')
 
         if in_table:
             flush_table()
@@ -171,20 +170,8 @@ def md_to_html(md_text: str) -> str:
 <title>ConnectFour Connect Final Project Report</title>
 <style>
   @page {{
-    size: A4 portrait;
-    margin: 18mm 16mm 18mm 16mm;
-    @top-center {{
-      content: "AILT9019 AI Literacy II · ConnectFour Connect (Group 31)";
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      font-size: 7.5pt;
-      color: #64748b;
-    }}
-    @bottom-center {{
-      content: "Page " counter(page) " of " counter(pages);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      font-size: 8pt;
-      color: #64748b;
-    }}
+    size: letter portrait;
+    margin: 15mm 15mm 15mm 15mm;
   }}
 
   *, *:before, *:after {{
@@ -192,74 +179,80 @@ def md_to_html(md_text: str) -> str:
   }}
 
   body {{
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 9.2pt;
-    line-height: 1.38;
+    font-family: "Calibri", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 8.6pt;
+    line-height: 1.26;
     color: #1e293b;
     margin: 0;
     padding: 0;
     background: #ffffff;
   }}
 
+  .header-pre {{
+    font-size: 11pt;
+    font-weight: 700;
+    color: #1F3864;
+    margin-bottom: 1px;
+  }}
+
   .report-title {{
-    font-size: 15.5pt;
+    font-size: 14pt;
     font-weight: 800;
-    color: #0f172a;
-    line-height: 1.25;
-    margin: 0 0 6px 0;
-    letter-spacing: -0.3px;
+    color: #1F3864;
+    line-height: 1.2;
+    margin: 0 0 2px 0;
+    letter-spacing: -0.2px;
+  }}
+
+  .template-req {{
+    font-size: 7.9pt;
+    font-style: italic;
+    color: #595959;
+    background: #f8fafc;
+    border-left: 2px solid #94a3b8;
+    padding: 1.5px 5px;
+    margin: 1.5px 0 3px 0;
   }}
 
   .section-title {{
-    font-size: 11pt;
+    font-size: 10.8pt;
     font-weight: 700;
-    color: #1e3a8a;
-    border-bottom: 1.5px solid #cbd5e1;
-    padding-bottom: 2px;
-    margin: 12px 0 4px 0;
+    color: #1F3864;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 1px;
+    margin: 7px 0 2px 0;
     page-break-after: avoid;
     break-after: avoid;
   }}
 
   .subsection-title {{
-    font-size: 9.8pt;
+    font-size: 9.0pt;
     font-weight: 700;
     color: #0369a1;
-    margin: 8px 0 2px 0;
+    margin: 5px 0 1px 0;
     page-break-after: avoid;
     break-after: avoid;
   }}
 
-  .contribution-note {{
-    font-size: 8.2pt;
-    font-style: italic;
-    color: #475569;
-    background: #f1f5f9;
-    padding: 2.5px 8px;
-    border-left: 3px solid #0284c7;
-    border-radius: 2px;
-    margin: 2px 0 5px 0;
-  }}
-
   .paragraph {{
-    margin: 0 0 5px 0;
+    margin: 0 0 2.5px 0;
     text-align: justify;
     text-justify: inter-word;
   }}
 
   .divider {{
     border: none;
-    border-top: 1px solid #e2e8f0;
-    margin: 8px 0;
+    border-top: 0.5px solid #e2e8f0;
+    margin: 4px 0;
   }}
 
   .list-item, .ordered-item {{
-    margin: 0 0 3px 18px;
+    margin: 0 0 1.5px 12px;
     text-align: justify;
   }}
 
   .table-container {{
-    margin: 6px 0 8px 0;
+    margin: 3px 0 4px 0;
     page-break-inside: avoid;
     break-inside: avoid;
   }}
@@ -267,21 +260,21 @@ def md_to_html(md_text: str) -> str:
   table {{
     width: 100%;
     border-collapse: collapse;
-    font-size: 8.0pt;
-    line-height: 1.28;
+    font-size: 7.5pt;
+    line-height: 1.2;
   }}
 
   th {{
-    background-color: #0f172a;
+    background-color: #1F3864;
     color: #ffffff;
     font-weight: 700;
     text-align: left;
-    padding: 4px 6px;
-    border: 1px solid #0f172a;
+    padding: 2.5px 4.5px;
+    border: 1px solid #1F3864;
   }}
 
   td {{
-    padding: 3.5px 6px;
+    padding: 2.0px 4.5px;
     border: 1px solid #cbd5e1;
     vertical-align: top;
   }}
@@ -291,14 +284,14 @@ def md_to_html(md_text: str) -> str:
   }}
 
   .code-block {{
-    background-color: #0f172a;
+    background-color: #0F172A;
     color: #f1f5f9;
     font-family: "Consolas", "Courier New", monospace;
-    font-size: 7.4pt;
-    line-height: 1.25;
-    padding: 6px 9px;
-    border-radius: 4px;
-    margin: 5px 0 7px 0;
+    font-size: 6.8pt;
+    line-height: 1.18;
+    padding: 3.5px 6px;
+    border-radius: 3px;
+    margin: 3px 0 4px 0;
     white-space: pre;
     overflow-x: hidden;
     page-break-inside: avoid;
@@ -307,10 +300,10 @@ def md_to_html(md_text: str) -> str:
 
   code {{
     font-family: "Consolas", "Courier New", monospace;
-    font-size: 8.2pt;
+    font-size: 7.8pt;
     background: #f1f5f9;
     color: #0f172a;
-    padding: 1px 3px;
+    padding: 0.5px 2px;
     border-radius: 2px;
     border: 1px solid #e2e8f0;
   }}
@@ -323,11 +316,11 @@ def md_to_html(md_text: str) -> str:
   .math-eq {{
     text-align: center;
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
-    padding: 3px 6px;
-    margin: 4px 0;
-    font-size: 8.8pt;
+    border: 0.5px solid #e2e8f0;
+    border-radius: 3px;
+    padding: 2px 5px;
+    margin: 3px 0;
+    font-size: 8.2pt;
   }}
 
   .page-break {{
@@ -337,12 +330,12 @@ def md_to_html(md_text: str) -> str:
 
   .appendix-header {{
     background: #e0f2fe;
-    border-left: 4px solid #0284c7;
-    padding: 4px 8px;
-    margin: 10px 0 6px 0;
-    font-size: 8.5pt;
+    border-left: 3px solid #0284c7;
+    padding: 3px 6px;
+    margin: 8px 0 5px 0;
+    font-size: 8.2pt;
     color: #0369a1;
-    font-weight: 600;
+    font-weight: 700;
   }}
 </style>
 </head>
@@ -373,30 +366,32 @@ def generate_pdf():
         page = browser.new_page()
         page.goto(f"file:///{HTML_PATH.as_posix()}", wait_until="networkidle")
 
-        # Generate Full PDF
-        page.pdf(
-            path=str(PDF_PATH),
-            format="A4",
+        # Generate report.pdf
+        pdf_bytes = page.pdf(
+            format="Letter",
             print_background=True,
-            margin={"top": "16mm", "bottom": "16mm", "left": "15mm", "right": "15mm"},
+            margin={"top": "14mm", "bottom": "14mm", "left": "14mm", "right": "14mm"},
             display_header_footer=True,
-            header_template='<div style="font-size: 7.5pt; font-family: sans-serif; color: #64748b; width: 100%; text-align: center; border-bottom: 0.5px solid #e2e8f0; padding-bottom: 3px;">AILT9019 AI Literacy II · ConnectFour Connect (Group 31) · Final Project Report</div>',
-            footer_template='<div style="font-size: 7.5pt; font-family: sans-serif; color: #64748b; width: 100%; text-align: center; padding-top: 3px;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
+            header_template='<div style="font-size: 7.2pt; font-family: Calibri, sans-serif; color: #595959; width: 100%; text-align: center; border-bottom: 0.5px solid #cbd5e1; padding-bottom: 2px;">AILT9019 AI Literacy II · Final Report · ConnectFour Connect (Group 31)</div>',
+            footer_template='<div style="font-size: 7.2pt; font-family: Calibri, sans-serif; color: #595959; width: 100%; text-align: center; padding-top: 2px;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
         )
         browser.close()
 
-    print(f"PDF successfully exported to: {PDF_PATH}")
+    PDF_REPORT_PATH.write_bytes(pdf_bytes)
+    PDF_FINAL_PATH.write_bytes(pdf_bytes)
+    print(f"PDF exported to: {PDF_REPORT_PATH}")
+    print(f"PDF exported to: {PDF_FINAL_PATH}")
 
     # Inspect page counts using PyPDF
-    reader = pypdf.PdfReader(str(PDF_PATH))
+    reader = pypdf.PdfReader(str(PDF_REPORT_PATH))
     total_pages = len(reader.pages)
     print(f"Total PDF Page Count: {total_pages}")
 
-    # Determine body page count (where does Appendix appear?)
+    # Determine body page count
     appendix_page = None
     for idx, page in enumerate(reader.pages):
         text = page.extract_text() or ""
-        if "SUPPLEMENTARY APPENDICES" in text or "Appendices" in text and "Appendix A" in text:
+        if "SUPPLEMENTARY APPENDICES" in text or "Appendix" in text and "Appendix A" in text:
             appendix_page = idx + 1
             break
 
