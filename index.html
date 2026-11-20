@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnectFour Connect | Activity-Mediated Social Mini-Game with Multi-Tier AI Architecture</title>
+  <meta name="description" content="AILT9019 AI Literacy II (Group 31) Course Project. Activity-mediated social interaction prototype featuring turn-based Connect Four, mode-partitioned canned communication, and adaptive dual-tier LLM/Minimax fallback agents.">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #0b1120;
+      --bg-card: #131d36;
+      --bg-card-hover: #1a284c;
+      --bg-glass: rgba(19, 29, 54, 0.75);
+      --border-color: #23355d;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent-primary: #38bdf8;
+      --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #6366f1 50%, #ec4899 100%);
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --badge-bg: rgba(56, 189, 248, 0.12);
+      --badge-border: rgba(56, 189, 248, 0.3);
+      --token-red: #ef4444;
+      --token-yellow: #f59e0b;
+      --success: #10b981;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: var(--accent-primary);
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 4.25rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      text-decoration: none;
+    }
+    .brand:hover { text-decoration: none; }
+    .brand-icon {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 8px;
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+    .nav-links a:hover {
+      color: var(--text-main);
+      text-decoration: none;
+    }
+    .nav-cta {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 1.15rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn:hover { text-decoration: none; }
+    .btn-primary {
+      background: #0284c7;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+    }
+    .btn-primary:hover {
+      background: #0369a1;
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid var(--border-color);
+    }
+    .btn-secondary:hover {
+      background: #27364f;
+      border-color: #3b5078;
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 5rem 0 3.5rem;
+      text-align: center;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(99, 102, 241, 0.08) 50%, transparent 80%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.95rem;
+      border-radius: 9999px;
+      background: var(--badge-bg);
+      border: 1px solid var(--badge-border);
+      color: var(--accent-primary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    .hero-title {
+      font-size: clamp(2.25rem, 5vw, 3.75rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      color: var(--text-muted);
+      max-width: 780px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.6;
+    }
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 3.5rem;
+    }
+
+    /* Stats Banner */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 4rem;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--accent-primary);
+    }
+    .stat-value {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.2;
+      margin-bottom: 0.25rem;
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+    .stat-desc {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 0.35rem;
+    }
+
+    /* Sections General */
+    .section {
+      padding: 4rem 0;
+      border-top: 1px solid var(--border-color);
+    }
+    .section-header {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 3rem;
+    }
+    .section-tag {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+    .section-title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      margin-bottom: 0.75rem;
+    }
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    /* Comparison Grid */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.75rem;
+    }
+    .comparison-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 2rem;
+    }
+    .comparison-card.negative {
+      border-color: rgba(239, 68, 68, 0.3);
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.04) 0%, var(--bg-card) 100%);
+    }
+    .comparison-card.positive {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, var(--bg-card) 100%);
+    }
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card-title.neg { color: #f87171; }
+    .card-title.pos { color: #34d399; }
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+    .feature-list li strong {
+      color: var(--text-main);
+    }
+
+    /* Architecture Diagram */
+    .arch-box {
+      background: #090e1a;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #93c5fd;
+      overflow-x: auto;
+      white-space: pre;
+      margin-bottom: 2rem;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.75rem;
+      transition: all 0.2s ease;
+    }
+    .feature-card:hover {
+      background: var(--bg-card-hover);
+      border-color: #38bdf8;
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      font-size: 1.75rem;
+      margin-bottom: 1rem;
+    }
+    .feature-card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+    }
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Evaluation Figures */
+    .figures-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.75rem;
+      margin-top: 2rem;
+    }
+    .figure-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .figure-card img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .figure-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.35rem;
+    }
+    .figure-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Team Grid */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+    }
+    .team-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.75rem;
+      text-align: center;
+    }
+    .team-avatar {
+      width: 4rem;
+      height: 4rem;
+      border-radius: 9999px;
+      background: var(--border-color);
+      margin: 0 auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      border: 2px solid var(--accent-primary);
+    }
+    .team-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.25rem;
+    }
+    .team-role {
+      font-size: 0.85rem;
+      color: var(--accent-primary);
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+    .team-work {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      text-align: left;
+    }
+    .team-share {
+      margin-top: 0.85rem;
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      background: rgba(56, 189, 248, 0.1);
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+    }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid var(--border-color);
+      background: #080d19;
+      padding: 3rem 0;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      color: var(--text-muted);
+    }
+    .footer-links a:hover {
+      color: var(--text-main);
+    }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero { padding: 3.5rem 0 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container nav-inner">
+      <a href="#" class="brand">
+        <div class="brand-icon">🔴</div>
+        <span>ConnectFour Connect</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#evaluation">Evaluation</a></li>
+        <li><a href="#team">Team</a></li>
+      </ul>
+      <div class="nav-cta">
+        <a href="report.pdf" class="btn btn-primary" target="_blank">
+          📄 Report PDF
+        </a>
+        <a href="https://github.com/CelVision/AILT9019_G31" class="btn btn-secondary" target="_blank">
+          GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-badge">
+        🎓 AILT9019 · AI Literacy II · Group 31 (Autumn 2026)
+      </div>
+      <h1 class="hero-title">
+        Activity-Mediated Social Mini-Game<br>with Multi-Tier AI Architecture
+      </h1>
+      <p class="hero-subtitle">
+        Alleviating campus conversational anxiety through turn-based Connect Four play, mode-partitioned canned interactions, and an adaptive fault-tolerant LLM / Minimax fallback engine.
+      </p>
+      <div class="hero-actions">
+        <a href="report.pdf" class="btn btn-primary" target="_blank" style="padding: 0.75rem 1.75rem; font-size: 1rem;">
+          📥 Download Final Report (PDF)
+        </a>
+        <a href="https://github.com/CelVision/AILT9019_G31" class="btn btn-secondary" target="_blank" style="padding: 0.75rem 1.75rem; font-size: 1rem;">
+          ⭐ Explore GitHub Repository
+        </a>
+        <a href="#evaluation" class="btn btn-secondary" style="padding: 0.75rem 1.5rem; font-size: 1rem;">
+          📊 Usability Study (N=15)
+        </a>
+      </div>
+
+      <!-- Quick Metrics Bar -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">93.3%</div>
+          <div class="stat-label">Task Completion</div>
+          <div class="stat-desc">14/15 completed both PvP & PvE sessions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">4.61 / 5.0</div>
+          <div class="stat-label">Likert Usability</div>
+          <div class="stat-desc">Exceeds 4.0/5.0 course benchmark</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">&lt; 25 ms</div>
+          <div class="stat-label">Heuristic Failover</div>
+          <div class="stat-desc">Local Depth-4 Minimax (< 50ms budget)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">100 / 100</div>
+          <div class="stat-label">Automated Tests</div>
+          <div class="stat-desc">100% pass rate in pytest test suites</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Problem & Activity-Mediated Socializing -->
+  <section class="section" id="about">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Core Motivation</div>
+        <h2 class="section-title">The Social Anxiety Bottleneck on Campus</h2>
+        <p class="section-desc">
+          Why traditional dating and social apps trigger conversational fatigue among university students, and how activity-centered gameplay breaks the deadlock.
+        </p>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="comparison-card negative">
+          <div class="card-title neg">
+            <span>❌</span> Mainstream Social Platforms
+          </div>
+          <ul class="feature-list">
+            <li><strong>Appearance-First Swiping:</strong> Drives superficial judgment and high-stakes biographical self-presentation.</li>
+            <li><strong>Unguided Text Chat:</strong> Imposes the burden of crafting witty introductory messages, leading to conversational paralysis.</li>
+            <li><strong>Awkward Pauses:</strong> Stagnant chat threads trigger insecurity and ghosting.</li>
+            <li><strong>Harassment Exposure:</strong> Unrestricted text channels create serious safety and moderation liabilities.</li>
+          </ul>
+        </div>
+
+        <div class="comparison-card positive">
+          <div class="card-title pos">
+            <span>✅</span> ConnectFour Connect Approach
+          </div>
+          <ul class="feature-list">
+            <li><strong>Activity-First Gameplay:</strong> Attention is centered on a familiar 7×6 board game; turns provide organic conversational pacing.</li>
+            <li><strong>Mode-Partitioned Chat:</strong> Human PvP uses 6 sportsmanlike preset phrases, 4 reaction stickers, and 4 Daily Icebreaker cards.</li>
+            <li><strong>AI Companion in PvE:</strong> Alibaba Cloud Bailian's <code>qwen3.6-flash</code> acts as a collegiate coach for advice and banter.</li>
+            <li><strong>Zero Wait-Time Availability:</strong> 15-second queue timeout guarantees instantaneous transition to an AI match if no peer arrives.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- System Architecture -->
+  <section class="section" id="architecture">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">System Design</div>
+        <h2 class="section-title">Decoupled Asynchronous Architecture</h2>
+        <p class="section-desc">
+          Built with Python 3.12 (FastAPI), real-time WebSockets, HTML5 Canvas 2D, and an autonomous dual-tier AI fallback subsystem.
+        </p>
+      </div>
+
+      <div class="arch-box">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   CLIENT (BROWSER)                                     │
+│  ┌───────────────────────┐  ┌───────────────────────┐  ┌────────────────────────────┐  │
+│  │ HTML5 Canvas 2D Board │  │ In-Game Canned Tray   │  │ Dual-Column Match Hub      │  │
+│  │ (Pointer Events / FX) │  │ (Phrases & Stickers)  │  │ (AI Banter & Icebreakers)  │  │
+│  └───────────┬───────────┘  └───────────┬───────────┘  └─────────────┬──────────────┘  │
+└──────────────┼──────────────────────────┼────────────────────────────┼─────────────────┘
+               │                          │ WebSocket (/ws/game)       │
+               ▼                          ▼                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              FASTAPI BACKEND & NETWORKING                              │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ ConnectionManager (Session UUIDs, Disconnect Handling, Rate Limiter)             │  │
+│  └────────────────────────────────────────┬─────────────────────────────────────────┘  │
+│                                           ▼                                            │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ MatchmakingQueue (Age Gate >=18, Gap <=3, 1 Hz Heartbeat, 15s PvE Routing)       │  │
+│  └────────────────────┬───────────────────────────────────────┬─────────────────────┘  │
+│                       ▼                                       ▼                        │
+│  ┌────────────────────────────────────────┐  ┌──────────────────────────────────────┐  │
+│  │ RoomManager (Active & Finished Rooms)  │  │ ConnectFourEngine (Bitboard / Matrix)│  │
+│  └────────────────────┬───────────────────┘  └──────────────────────────────────────┘  │
+│                       ▼                                                                │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ Adaptive Dual-Tier AI Subsystem                                                  │  │
+│  │  ├─ Tier 1: Primary LLM (Qwen3.6-Flash via Bailian API, 3.5s Deadline)           │  │
+│  │  └─ Tier 2: Local Deterministic Minimax Bot (Depth 4, Alpha-Beta, ~23.6ms)       │  │
+│  └──────────────────────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────────────────────┘</div>
+    </div>
+  </section>
+
+  <!-- Key Features -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Engineering Highlights</div>
+        <h2 class="section-title">Key Technical Implementations</h2>
+        <p class="section-desc">
+          Engineered for reliability, real-time responsiveness, and complete user privacy.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>Age-Gated Matchmaking</h3>
+          <p>Single-pass atomic queue tick evaluates compatible peers within |ΔAge| ≤ 3 years (Age ≥ 18). Authoritative 1 Hz heartbeat drives countdowns without relying on client timers.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Dual-Tier AI Fallback</h3>
+          <p>Queries Alibaba Cloud Bailian <code>qwen3.6-flash</code> within a strict 3.5s deadline. Upon timeout, HTTP 429, or illegal column output, falls back to local Depth-4 Minimax in ~23.6ms.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Mode-Partitioned Chat</h3>
+          <p>PvP structurally omits free-form text, using 6 canned phrases and 4 Daily Icebreaker cards. PvE enables safe conversational banter with the AI Coach via a 6-turn sliding window.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🎨</div>
+          <h3>Canvas 2D & Web Audio</h3>
+          <p>Unified Pointer Events input layer handles multi-touch, stylus, and mouse with responsive canvas scaling. Real-time procedural audio synthesis without external MP3 dependencies.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>Zero Persistent PII</h3>
+          <p>Collects zero names, emails, phone numbers, or passwords. Guest nicknames and birth years exist solely in RAM for the active socket session and are wiped upon disconnection.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🐳</div>
+          <h3>Hardened DevOps Pipeline</h3>
+          <p>Docker container with non-root execution and read-only filesystem. Automated 8-point deployment invariant verification script (<code>check_public_url.py</code>) validates endpoints.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Evaluation & Usability Study -->
+  <section class="section" id="evaluation">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Empirical Validation</div>
+        <h2 class="section-title">15-User Cohort Usability Evaluation</h2>
+        <p class="section-desc">
+          Tested with 15 university students (ages 18–24, mean 21.2) across two full sessions (live peer PvP and AI Coach PvE).
+        </p>
+      </div>
+
+      <div class="figures-grid">
+        <div class="figure-card">
+          <img src="figures/task_completion.svg" alt="Task Completion Rate">
+          <div class="figure-title">Task Completion Rate: 93.3%</div>
+          <div class="figure-desc">14 of 15 participants completed both matches (exceeding ≥85% benchmark).</div>
+        </div>
+
+        <div class="figure-card">
+          <img src="figures/likert_ratings.svg" alt="Likert Usability Ratings">
+          <div class="figure-title">Mean Likert Usability: 4.61 / 5.0</div>
+          <div class="figure-desc">Evaluated across UI intuitiveness, turn latency, chat comfort, icebreaker utility, and satisfaction.</div>
+        </div>
+
+        <div class="figure-card">
+          <img src="figures/turn_latency_distribution.svg" alt="Turn Latency Distribution">
+          <div class="figure-title">Turn Latency Distribution</div>
+          <div class="figure-desc">AI LLM moves average 1.82s (deadline 3.5s); local Minimax heuristic executes in ~23.6ms.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Team & Contributors -->
+  <section class="section" id="team">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Group 31</div>
+        <h2 class="section-title">Authors & Individual Ownership</h2>
+        <p class="section-desc">
+          Empirical contributions based on codebase commits, technical complexity, and architectural ownership.
+        </p>
+      </div>
+
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="team-avatar">YZ</div>
+          <div class="team-name">Yuzhou Zhou</div>
+          <div class="team-role">Team Lead & Architecture</div>
+          <div class="team-work">
+            • WebSocket protocol & async gateway<br>
+            • Bailian Qwen3.6-Flash & Minimax failover<br>
+            • AI Coach companion agent & Icebreakers<br>
+            • Packaging pipeline & report drafting
+          </div>
+          <span class="team-share">Effort: 34%</span>
+        </div>
+
+        <div class="team-card">
+          <div class="team-avatar">SX</div>
+          <div class="team-name">Scott Xiang</div>
+          <div class="team-role">DevOps & Infrastructure</div>
+          <div class="team-work">
+            • Dockerfile, Compose & systemd unit<br>
+            • Nginx SSL/WSS reverse proxy rules<br>
+            • Deployment checker (check_public_url.py)<br>
+            • Deployment test suites & packaging
+          </div>
+          <span class="team-share">Effort: 22%</span>
+        </div>
+
+        <div class="team-card">
+          <div class="team-avatar">LS</div>
+          <div class="team-name">Leo Shang</div>
+          <div class="team-role">Frontend & Visual Client</div>
+          <div class="team-work">
+            • HTML5 Canvas 2D 7×6 board renderer<br>
+            • Pointer Events input normalization<br>
+            • Web Audio API procedural synthesizers<br>
+            • Token descent gravity & cyan highlights
+          </div>
+          <span class="team-share">Effort: 22%</span>
+        </div>
+
+        <div class="team-card">
+          <div class="team-avatar">YM</div>
+          <div class="team-name">Yuexiang Ma</div>
+          <div class="team-role">Backend Systems & QA</div>
+          <div class="team-work">
+            • In-memory FIFO MatchmakingQueue<br>
+            • RoomManager lifecycle extraction<br>
+            • Test Suite A (20 pairs) & Suite B (10 faults)<br>
+            • Cohort usability study analysis
+          </div>
+          <span class="team-share">Effort: 22%</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="report.pdf" target="_blank">Final Report (PDF)</a>
+        <a href="AILT9019_Final_Report_G31.docx" target="_blank">Word Report (DOCX)</a>
+        <a href="FINAL_PROJECT_REPORT.md" target="_blank">Markdown Master</a>
+        <a href="https://github.com/CelVision/AILT9019_G31" target="_blank">GitHub Repository</a>
+        <a href="https://youtu.be/AILT9019_G31_pres" target="_blank">Presentation Video</a>
+        <a href="https://youtu.be/AILT9019_G31_demo" target="_blank">Demo Video</a>
+      </div>
+      <p>
+        AILT9019 AI Literacy II · Group 31 · ConnectFour Connect © 2026. All rights reserved.<br>
+        Developed for educational research and university social interaction prototyping.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
