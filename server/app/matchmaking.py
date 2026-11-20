@@ -51,6 +51,7 @@ class QueueEntry:
     age: int
     ws: object = None
     queued_at: float = field(default_factory=time.time)
+    custom_ai: Optional[Dict[str, str]] = None
 
     def as_player(self) -> Dict[str, object]:
         """A room-side copy of this entry (rooms never share the queue row)."""
@@ -59,6 +60,7 @@ class QueueEntry:
             "session_id": self.session_id,
             "nickname": self.nickname,
             "age": self.age,
+            "custom_ai": self.custom_ai,
         }
 
 

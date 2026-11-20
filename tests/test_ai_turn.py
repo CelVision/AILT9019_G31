@@ -1,5 +1,5 @@
 """
-Tests for the GLM-first PvE turn handler and the temporary safe-move fallback.
+Tests for the primary-AI PvE turn handler and the local fallback.
 
 The gateway's WebSocket is set to None, so manager.send_json swallows the
 send attempt; these tests focus on board mutation and fallback state.

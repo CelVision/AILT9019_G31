@@ -1,6 +1,6 @@
 """
 Conversational Chat Agent for ConnectFour Connect (AI Companion / Daily Banter).
-Uses the OpenAI-compatible Bailian / GLM endpoint for friendly collegiate banter.
+Uses the OpenAI-compatible Alibaba Cloud Bailian endpoint for friendly collegiate banter.
 """
 
 from __future__ import annotations

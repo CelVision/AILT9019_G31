@@ -8,7 +8,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const registrationForm = document.getElementById('registrationForm');
   const nicknameInput = document.getElementById('nicknameInput');
   const birthYearInput = document.getElementById('birthYearInput');
+  const customApiKeyInput = document.getElementById('customApiKeyInput');
+  const customModelSelect = document.getElementById('customModelSelect');
+  const customBaseUrlInput = document.getElementById('customBaseUrlInput');
   const formError = document.getElementById('formError');
+
+  // Restore custom AI settings if saved
+  try {
+    if (customApiKeyInput && localStorage.getItem('cc_custom_api_key')) {
+      customApiKeyInput.value = localStorage.getItem('cc_custom_api_key');
+    }
+    if (customModelSelect && localStorage.getItem('cc_custom_model')) {
+      customModelSelect.value = localStorage.getItem('cc_custom_model');
+    }
+    if (customBaseUrlInput && localStorage.getItem('cc_custom_base_url')) {
+      customBaseUrlInput.value = localStorage.getItem('cc_custom_base_url');
+    }
+  } catch (err) {}
 
   const queueModal = document.getElementById('queueModal');
   const queueProgress = document.getElementById('queueProgress');
@@ -146,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     player1Name.textContent = myPlayerNum === 1 ? 'You (Red)' : `${payload.opponent_nickname} (Red)`;
     player1Role.textContent = myPlayerNum === 1 ? 'Host' : 'Opponent';
     player2Name.textContent = myPlayerNum === 2 ? 'You (Yellow)' : `${payload.opponent_nickname} (Yellow)`;
-    player2Role.textContent = payload.is_pve ? 'AI Bot (GLM)' : 'Peer';
+    player2Role.textContent = payload.is_pve ? 'AI Coach' : 'Peer';
 
     resultModal.classList.add('hidden');
     const arenaStatus = document.getElementById('gameArenaStatus');
@@ -192,7 +208,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   socketClient.on('board_update', (payload) => {
     totalTurns++;
-    boardRenderer.setBoard(payload.board);
+    if (payload.last_move && typeof payload.last_move.row === 'number' && typeof payload.last_move.column === 'number') {
+      const lm = payload.last_move;
+      boardRenderer.dropTokenAnimated(lm.row, lm.column, lm.player, () => {
+        boardRenderer.setBoard(payload.board);
+        boardRenderer.setLastMove(lm.row, lm.column);
+      });
+    } else {
+      boardRenderer.setBoard(payload.board);
+    }
+    if (window.soundEffects) window.soundEffects.playDrop();
     currentTurn = payload.current_turn;
     updateTurnState(currentTurn);
     startTurnTimer(30);
@@ -200,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   socketClient.on('broadcast_reaction', (payload) => {
     cannedChat.showReaction(payload.from_player, payload.category, payload.id);
+    if (window.soundEffects) window.soundEffects.playPop();
   });
 
   socketClient.on('game_over', (payload) => {
@@ -208,8 +234,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (payload.winning_coordinates) {
       boardRenderer.setWinningCoords(payload.winning_coordinates);
     }
+    if (payload.winner === myPlayerNum && window.soundEffects) {
+      window.soundEffects.playWin();
+    }
     const arenaStatus = document.getElementById('gameArenaStatus');
     if (arenaStatus) arenaStatus.textContent = 'Match Finished';
+
+    turnIndicator.textContent = 'Game Over';
+    turnIndicator.style.color = '#94a3b8';
+    player1Card.classList.remove('active-turn');
+    player2Card.classList.remove('active-turn');
+    timerBar.style.width = '0%';
+    timerText.textContent = '--';
 
     // Win or lose does NOT affect chat: keep chat fully active for post-match talk!
     if (isPveMatch) {
@@ -326,7 +362,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Connect to WebSocket; queue_join fires from the 'connected' handler.
+    const customAi = {};
+    if (customApiKeyInput && customApiKeyInput.value.trim()) customAi.api_key = customApiKeyInput.value.trim();
+    if (customModelSelect && customModelSelect.value.trim()) customAi.model = customModelSelect.value.trim();
+    if (customBaseUrlInput && customBaseUrlInput.value.trim()) customAi.base_url = customBaseUrlInput.value.trim();
+
+    try {
+      if (customApiKeyInput && customApiKeyInput.value.trim()) {
+        localStorage.setItem('cc_custom_api_key', customApiKeyInput.value.trim());
+      } else {
+        localStorage.removeItem('cc_custom_api_key');
+      }
+      if (customModelSelect) localStorage.setItem('cc_custom_model', customModelSelect.value.trim());
+      if (customBaseUrlInput) localStorage.setItem('cc_custom_base_url', customBaseUrlInput.value.trim());
+    } catch (err) {}
+
     pendingJoin = { nickname, birth_year: birthYear };
+    if (Object.keys(customAi).length > 0) {
+      pendingJoin.custom_ai = customAi;
+    }
     showQueueModal();
     socketClient.connect();
   });
@@ -394,7 +448,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (data.winner === myPlayerNum) {
       resultIcon.textContent = '🏆';
       resultTitle.textContent = 'Victory!';
-      resultSubtitle.textContent = 'You connected 4 tokens!';
+      if (data.reason === 'turn_timeout') {
+        resultSubtitle.textContent = 'Opponent timed out!';
+      } else if (data.reason === 'opponent_disconnected') {
+        resultSubtitle.textContent = 'Opponent disconnected.';
+      } else {
+        resultSubtitle.textContent = 'You connected 4 tokens!';
+      }
     } else if (data.winner === 0) {
       resultIcon.textContent = '🤝';
       resultTitle.textContent = 'Draw Game';
@@ -402,7 +462,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       resultIcon.textContent = '👏';
       resultTitle.textContent = 'Well Played!';
-      resultSubtitle.textContent = 'Your opponent connected 4 in a row.';
+      if (data.reason === 'turn_timeout') {
+        resultSubtitle.textContent = 'Turn time limit expired.';
+      } else if (data.reason === 'opponent_disconnected') {
+        resultSubtitle.textContent = 'Opponent disconnected.';
+      } else {
+        resultSubtitle.textContent = 'Your opponent connected 4 in a row.';
+      }
     }
   }
 

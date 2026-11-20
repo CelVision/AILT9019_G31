@@ -1,5 +1,5 @@
 """
-Mocked tests for the GLM adapter (current model: GLM-4.5-Air).
+Mocked tests for the OpenAI-compatible AI move adapter (Qwen3.6-Flash).
 
 No real API key or network access is required: every request goes through an
 httpx.MockTransport. Live verification is the standalone smoke test:
@@ -23,11 +23,11 @@ EMPTY_BOARD = [[0 for _ in range(7)] for _ in range(6)]
 LEGAL = [0, 1, 2, 3, 4, 5, 6]
 
 
-def settings(api_key: str | None = "test-key", allowed=("glm-4.5-air",)) -> AISettings:
+def settings(api_key: str | None = "test-key", allowed=("qwen3.6-flash",)) -> AISettings:
     return AISettings(
         api_key=api_key,
-        base_url="https://glm.example.test/api/paas/v4",
-        default_model="glm-4.5-air",
+        base_url="https://bailian.example.test/compatible-mode/v1",
+        default_model="qwen3.6-flash",
         allowed_models=allowed,
         timeout_seconds=1.0,
     )
@@ -71,7 +71,7 @@ def test_request_sends_auth_and_parses_move():
         assert request.url.path.endswith("/chat/completions")
         assert request.headers.get("authorization") == "Bearer test-key"
         body = json.loads(request.read())
-        assert body["model"] == "glm-4.5-air"
+        assert body["model"] == "qwen3.6-flash"
         assert body["thinking"] == {"type": "disabled"}
 
     move = asyncio.run(
@@ -103,7 +103,7 @@ def test_request_rejects_model_outside_allowlist():
         asyncio.run(
             request_glm_move(
                 EMPTY_BOARD,
-                model="glm-4-plus",
+                model="not-allowlisted-model",
                 settings=settings(),
                 transport=transport('{"column": 3}'),
             )

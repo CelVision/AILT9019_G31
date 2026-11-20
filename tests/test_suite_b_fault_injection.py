@@ -56,7 +56,7 @@ def make_room(board=None) -> dict:
     }
 
 
-# (label, exception raised by the GLM adapter)
+# (label, exception raised by the AI adapter)
 FAULTS = [
     ("http_500", GLMError("http_500")),
     ("http_502", GLMError("http_502")),

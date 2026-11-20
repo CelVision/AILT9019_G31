@@ -16,6 +16,8 @@ class GameBoardRenderer {
     this.isMyTurn = false;
     this.myPlayerNum = 1;
     this.winningCoords = null;
+    this.lastMove = null;
+    this.animatingToken = null;
 
     this.initMetrics();
     this.bindEvents();
@@ -115,9 +117,41 @@ class GameBoardRenderer {
     this.render();
   }
 
+  setLastMove(row, col) {
+    this.lastMove = (row >= 0 && col >= 0) ? [row, col] : null;
+    this.render();
+  }
+
+  dropTokenAnimated(row, col, playerNum, onComplete) {
+    const targetY = this.boardOffsetY + row * this.rowHeight + this.rowHeight / 2;
+    const x = col * this.colWidth + this.colWidth / 2;
+    let currentY = this.boardOffsetY - this.rowHeight / 2;
+    let velocity = 4;
+    const gravity = 3.2;
+
+    const step = () => {
+      velocity += gravity;
+      currentY += velocity;
+      if (currentY >= targetY) {
+        currentY = targetY;
+        this.animatingToken = null;
+        this.render();
+        if (onComplete) onComplete();
+        return;
+      }
+      this.animatingToken = { row, col, x, y: currentY, player: playerNum };
+      this.render();
+      requestAnimationFrame(step);
+    };
+    this.animatingToken = { row, col, x, y: currentY, player: playerNum };
+    requestAnimationFrame(step);
+  }
+
   reset() {
     this.board = Array(this.rows).fill(0).map(() => Array(this.cols).fill(0));
     this.winningCoords = null;
+    this.lastMove = null;
+    this.animatingToken = null;
     this.hoverCol = -1;
     this.render();
   }
@@ -152,15 +186,21 @@ class GameBoardRenderer {
         const y = this.boardOffsetY + r * this.rowHeight + this.rowHeight / 2;
         const cell = this.board[r][c];
 
-        if (cell === 0) {
-          // Empty dark hole
+        if (cell === 0 || (this.animatingToken && this.animatingToken.row === r && this.animatingToken.col === c)) {
+          // Empty dark hole while animating into this cell
           this.drawEmptySlot(x, y);
         } else {
           // Player token (1=Red, 2=Yellow)
           const isWinning = this.winningCoords && this.winningCoords.some(([wr, wc]) => wr === r && wc === c);
-          this.drawToken(x, y, cell, false, isWinning);
+          const isLastMove = this.lastMove && this.lastMove[0] === r && this.lastMove[1] === c;
+          this.drawToken(x, y, cell, false, isWinning, isLastMove);
         }
       }
+    }
+
+    // 4. Draw falling animated token (WP1-3)
+    if (this.animatingToken) {
+      this.drawToken(this.animatingToken.x, this.animatingToken.y, this.animatingToken.player);
     }
   }
 
@@ -178,7 +218,7 @@ class GameBoardRenderer {
     this.ctx.restore();
   }
 
-  drawToken(x, y, player, isHover = false, isWinning = false) {
+  drawToken(x, y, player, isHover = false, isWinning = false, isLastMove = false) {
     this.ctx.save();
     this.ctx.beginPath();
     this.ctx.arc(x, y, isHover ? this.slotRadius * 0.85 : this.slotRadius, 0, Math.PI * 2);
@@ -212,6 +252,13 @@ class GameBoardRenderer {
       this.ctx.strokeStyle = '#ffffff';
       this.ctx.shadowColor = '#fbbf24';
       this.ctx.shadowBlur = 15;
+      this.ctx.stroke();
+    } else if (isLastMove) {
+      // Highlight last dropped token (QW-6)
+      this.ctx.lineWidth = 4;
+      this.ctx.strokeStyle = '#38bdf8';
+      this.ctx.shadowColor = '#06b6d4';
+      this.ctx.shadowBlur = 12;
       this.ctx.stroke();
     } else {
       this.ctx.lineWidth = 2;

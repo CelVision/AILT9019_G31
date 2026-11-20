@@ -211,6 +211,32 @@
             <span class="form-hint">Must be 18+ to enter (Born 2008 or earlier)</span>
           </div>
 
+          <!-- Optional Custom AI Configuration ("Port" for testing & release evaluation) -->
+          <details class="custom-ai-accordion">
+            <summary class="custom-ai-summary">⚙️ Custom AI Settings (Optional)</summary>
+            <div class="custom-ai-body">
+              <div class="form-group">
+                <label for="customApiKeyInput">Custom API Key</label>
+                <input type="password" id="customApiKeyInput" placeholder="e.g. sk-..." autocomplete="off">
+                <span class="form-hint">Leave blank to use server environment or local Minimax bot</span>
+              </div>
+              <div class="form-group">
+                <label for="customModelSelect">AI Model</label>
+                <select id="customModelSelect">
+                  <option value="qwen3.6-flash" selected>Qwen 3.6 Flash (Default)</option>
+                  <option value="deepseek-v4.1-flash">DeepSeek V4.1 Flash</option>
+                  <option value="qwen3.8-flash">Qwen 3.8 Flash</option>
+                  <option value="glm-5">GLM-5</option>
+                </select>
+              </div>
+              <div class="form-group mb-0">
+                <label for="customBaseUrlInput">API Base URL (Optional)</label>
+                <input type="url" id="customBaseUrlInput" placeholder="https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1">
+                <span class="form-hint">Compatible with any OpenAI-compatible endpoint</span>
+              </div>
+            </div>
+          </details>
+
           <div id="formError" class="form-error hidden"></div>
 
           <div class="onboarding-guide">
@@ -255,6 +281,7 @@
 
   </main>
 
+  <script src="js/sound_effects.js?v=20261120"></script>
   <script src="js/game_board.js?v=20261026"></script>
   <script src="js/canned_chat.js?v=20261026"></script>
   <script src="js/socket_client.js?v=20261026"></script>

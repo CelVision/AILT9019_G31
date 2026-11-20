@@ -7,7 +7,7 @@
 [![Course](https://img.shields.io/badge/Course-AILT9019_AI_Literacy_II-blue.svg)](https://moodle.hku.hk/)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_WebSocket-009688.svg)](https://fastapi.tiangolo.com/)
-[![LLM](https://img.shields.io/badge/AI_Core-GLM_4.5_Air-orange.svg)](https://open.bigmodel.cn/)
+[![LLM](https://img.shields.io/badge/AI_Core-Qwen3.6_Flash-orange.svg)](https://bailian.console.aliyun.com/)
 [![Status](https://img.shields.io/badge/Status-Sprint_1_Underway-success.svg)](#-sprint-roadmap--team-tasks)
 
 ---
@@ -18,14 +18,14 @@ Contemporary digital social platforms rely almost exclusively on appearance-driv
 
 **ConnectFour Connect** is an activity-mediated social interaction prototype:
 1. **Activity-First Socializing**: Interpersonal interaction takes place within a live, turn-based 7×6 Connect Four game. The shared game rules eliminate awkward pauses and lower emotional stakes.
-2. **Safe Canned Communication**: Free-form text input is completely omitted by design. Players interact exclusively using a sportsmanship palette of **6 preset phrases** and **4 reaction stickers** with animated speech bubbles.
+2. **Safe, Mode-Partitioned Chat**: PvP has no unmoderated free-form text between peers. Players use a sportsmanship palette of **6 preset phrases**, **4 reaction stickers**, and curated **Daily Icebreaker** cards. PvE adds free-form conversation with the **AI Coach**, who never receives a human peer's messages.
 3. **Age-Gated In-Memory Matchmaking**: Players complete lightweight guest registration (Nickname + Birth Year). The backend enforces $\text{Age} \ge 18$ and pairs users with peers within an acceptable age difference ($|\Delta\text{Age}| \le 3$).
 4. **Server-Owned Queue**: join requests are validated server-side (nickname 2–16, age $\ge 18$) and rejected with a structured `error` frame; a `queue_status` heartbeat every second drives the on-screen countdown from server state rather than a browser timer.
-5. **Guaranteed Zero-Wait Availability (AI Fallback)**: If a human peer is not found within the 15-second matchmaking queue, the server automatically routes the player into a PvE room with an intelligent **GLM-4.5-Air** opponent (temporary; **GLM-4.7-Flash** is the target once account access is enabled).
+5. **Guaranteed Zero-Wait Availability (AI Fallback)**: If a human peer is not found within the 15-second matchmaking queue, the server automatically routes the player into a PvE room with an **AI Coach** powered by **Qwen3.6-Flash** through Alibaba Cloud Bailian's OpenAI-compatible API.
 6. **Fail-Safe Fallback**: If the upstream LLM returns a rate-limit/error response or exceeds the **3.5s** move deadline, the server plays a local Minimax move (depth 4, validated against the live board) inside the same turn, so the room never stalls; a centre-out legal move is used only if Minimax itself fails.
 7. **Zero Persistent PII**: All user sessions and room memory exist strictly in RAM and are immediately purged upon socket disconnection.
 
-> **⚠️ Current sprint note (2026-10-22):** PvE temporarily uses **GLM-4.5-Air** because this account cannot yet access `glm-4.7-flash` or `glm-4.5-flash`. The live Connect Four prompt measured **~2.3–2.9s**, so the local deadline is **3.5s**. **GLM-4.7-Flash** remains the target once it is enabled in the GLM console. Gemini integration is deferred. The Minimax fallback is wired again (WP3-7): if GLM is unavailable, the server answers with a local Minimax move and reports `strategy: minimax` in `pve_fallback_notice`. See [docs/WORKLOG.md](docs/WORKLOG.md) for the current architecture and handoff notes.
+> **ℹ️ Provider note (2026-11-08):** PvE moves and AI Coach chat use Alibaba Cloud Bailian **`qwen3.6-flash`** through a server-side OpenAI-compatible endpoint. The per-move deadline is **3.5s**. If the provider times out, returns an error, or returns an illegal column, the server plays a validated depth-4 **Minimax** move and reports `strategy: minimax` in `pve_fallback_notice`. The key is read only from the server environment and is never sent to the browser. See [docs/WORKLOG.md](docs/WORKLOG.md) for the current architecture and handoff notes.
 
 ---
 
@@ -70,7 +70,7 @@ AILT9019_G31/
 │       └── socket_client.js            # WebSocket protocol connection handler
 ├── server/                             # FastAPI backend service
 │   ├── requirements.txt                # Python dependencies
-│   ├── .env.example                    # GLM/AI settings template (never commit .env)
+│   ├── .env.example                    # AI provider settings template (never commit .env)
 │   └── app/
 │       ├── __init__.py
 │       ├── main.py                     # ASGI entrypoint & WebSocket endpoint (/ws/game)
@@ -81,13 +81,15 @@ AILT9019_G31/
 │       ├── schemas.py                  # Pydantic protocol models & event payloads
 │       └── ai/
 │           ├── __init__.py
-│           ├── glm_client.py           # GLM-4.5-Air OpenAI-compatible client (temporary)
+│           ├── glm_client.py           # OpenAI-compatible Qwen3.6-Flash move client
+│           ├── chat_agent.py           # AI Coach chat, topics & fallback replies
 │           └── minimax_fallback.py     # Deterministic Alpha-Beta heuristic bot
 ├── tests/                              # Automated test suites & verification
 │   ├── test_connect4_engine.py         # Connect Four rules & win detection tests
 │   ├── test_app_smoke.py               # FastAPI root/static/health/WS smoke tests
-│   ├── test_glm_client.py              # Mocked GLM request/parse/validation tests
-│   ├── test_ai_turn.py                 # GLM PvE turn + safe-move fallback tests
+│   ├── test_glm_client.py              # Mocked AI request/parse/validation tests
+│   ├── test_ai_turn.py                 # AI PvE turn + Minimax fallback tests
+│   ├── test_chat_agent.py              # AI Coach chat request and fallback tests
 │   ├── test_deployment_check.py        # Deployment checker regression tests
 │   ├── test_suite_a_matchmaking.py     # Test Suite A: 20 age boundary cases + WS rejections
 │   └── test_suite_b_fault_injection.py # Test Suite B: 10 LLM fault injections + Minimax block
@@ -107,7 +109,7 @@ AILT9019_G31/
 ### 1. Prerequisites
 - Python 3.12+ (or 3.14)
 - A modern web browser (Chrome, Edge, Safari, Firefox)
-- (Optional for AI) GLM API key (Zhipu/Z.ai), stored in `server/.env` or the server environment — never committed
+- (Optional for AI) Alibaba Cloud Bailian API key, stored in `server/.env` or the server environment — never committed
 
 ### 2. Local setup
 
@@ -124,7 +126,7 @@ python -m uvicorn app.main:app --app-dir server --host 127.0.0.1 --port 8000 --w
 
 Open **http://127.0.0.1:8000/**. The same service provides the frontend, `/api/health` and `/ws/game`; no frontend build or separate static server is needed. A static server on port 3000 cannot provide the client's same-origin WebSocket backend.
 
-GLM is optional for a local run: without a key, the existing PvE handler uses a local legal-move fallback. For GLM, copy `server/.env.example` to `server/.env`, edit it locally and restart. Never commit a real key.
+The AI provider is optional for a local run: without a key, the PvE handler uses a local legal-move fallback and AI Coach returns a canned reply. To enable Qwen3.6-Flash, copy `server/.env.example` to `server/.env`, set `AI_API_KEY` locally and restart. Never commit a real key. The server also accepts the legacy `GLM_*` variable names as migration fallbacks.
 
 ### 3. Deployment from the deploy directory
 
@@ -140,7 +142,7 @@ Open **http://127.0.0.1:8000/**. Compose resolves its build context to the repos
 
 The image runs as a non-root user. Compose binds port 8000 to loopback, drops Linux capabilities, uses a read-only filesystem with temporary `/tmp`, and limits container log size. Keep **one instance and one worker**: rooms and matchmaking live in process memory. Restarting ends active games. Health checks report an unhealthy service, but the restart policy only restarts a process that exits.
 
-For GLM settings, copy and edit the example, then pass the same environment file on each deployment command:
+For AI provider settings, copy and edit the example, then pass the same environment file on each deployment command:
 
 ```bash
 cp server/.env.example server/.env
@@ -164,7 +166,7 @@ cd /var/www/AILT9019_G31
 python3 -m venv server/venv
 server/venv/bin/python -m pip install -r server/requirements.txt
 sudo install -d -m 750 -o root -g www-data /etc/connectfour
-# Optional: create/edit /etc/connectfour/connectfour.env for GLM.
+# Optional: create/edit /etc/connectfour/connectfour.env for the AI provider.
 # Set root:www-data ownership and mode 640 on that file.
 sudo install -m 644 deploy/connectfour.service /etc/systemd/system/connectfour.service
 sudo systemctl daemon-reload
@@ -205,7 +207,7 @@ python deploy/check_public_url.py http://127.0.0.1:8000
 python deploy/check_public_url.py https://your-domain.example --timeout 10
 ```
 
-The checker requires healthy JSON, nonempty HTML/CSS/JS with appropriate content types, and a WebSocket upgrade plus ping/pong. HTTPS certificate verification stays enabled. Redirects fail deliberately so HTTP and WebSocket checks probe the same final origin. Failures exit with status 1. No player is registered and no GLM call is made.
+The checker requires healthy JSON, nonempty HTML/CSS/JS with appropriate content types, and a WebSocket upgrade plus ping/pong. HTTPS certificate verification stays enabled. Redirects fail deliberately so HTTP and WebSocket checks probe the same final origin. Failures exit with status 1. No player is registered and no AI call is made.
 
 After connectivity succeeds, use synthetic nicknames and compatible adult birth years in two browsers to verify matching, one move on both screens and a reaction. Separately check the no-peer PvE route and fallback notice. These game and manual accessibility checks are separate from infrastructure verification.
 
@@ -232,7 +234,7 @@ To keep development organized and aligned with our proposal milestones:
 3. **Branching Convention**:
    - `feat/wp1-canvas-renderer`
    - `feat/wp2-websocket-gateway`
-   - `feat/wp3-glm-ai`
+   - `feat/wp3-ai-core`
    - `fix/connect4-diagonal-check`
 4. **Testing Before Merge**: Ensure all unit tests pass before committing:
    ```bash
@@ -248,7 +250,7 @@ To keep development organized and aligned with our proposal milestones:
 | :--- | :--- | :--- |
 | **Sat, Oct 10 (Week 6)** | Proposal Final Submission | Submit Revised Proposal PDF via Moodle form |
 | **Sun, Oct 11 (Week 6)** | Sprint 1 Review | Local 2-player PvP prototype working over WebSockets |
-| **Sun, Oct 18 (Week 7)** | Sprint 2 Review | Cloud VPS deployment + GLM AI integration |
+| **Sun, Oct 18 (Week 7)** | Sprint 2 Review | Cloud VPS deployment + Bailian AI integration |
 | **Sun, Oct 25 (Week 8)** | Sprint 3 Review | 100% pass on Test Suites A & B; 15-student user trials completed |
 | **Mon, Oct 26** | **Mid-Term Checkpoint** | Live public URL + walkthrough demo video + progress report |
 

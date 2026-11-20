@@ -131,3 +131,51 @@ def test_ai_chat_turn_works_in_finished_room(monkeypatch):
     assert len(room["chat_history"]) == 2
     assert "Good game" in room["chat_history"][1]["content"]
     main.finished_rooms.clear()
+
+
+def test_find_room_for_chat_selects_latest_finished_room():
+    main.active_rooms.clear()
+    main.finished_rooms.clear()
+    main.finished_rooms["room1"] = {
+        "room_id": "room1",
+        "is_pve": False,
+        "p1": {"session_id": "user1"},
+        "p2": {"session_id": "user2"},
+        "finished_at": 100.0,
+    }
+    main.finished_rooms["room2"] = {
+        "room_id": "room2",
+        "is_pve": False,
+        "p1": {"session_id": "user1"},
+        "p2": {"session_id": "user3"},
+        "finished_at": 200.0,
+    }
+    r_id, r = main.find_room_for_chat("user1")
+    assert r_id == "room2"
+    assert r["finished_at"] == 200.0
+    main.finished_rooms.clear()
+
+
+def test_create_pve_match_applies_custom_ai_settings():
+    main.active_rooms.clear()
+    user = {
+        "ws": None,
+        "session_id": "cust-user",
+        "nickname": "Tester",
+        "age": 20,
+        "custom_ai": {
+            "api_key": "custom-secret-key",
+            "model": "deepseek-v4.1-flash",
+            "base_url": "https://custom.endpoint.com/v1",
+        },
+    }
+    asyncio.run(main.create_pve_match(user))
+    assert len(main.active_rooms) == 1
+    room = list(main.active_rooms.values())[0]
+    assert "ai_settings" in room
+    assert room["ai_settings"].api_key == "custom-secret-key"
+    assert room["ai_settings"].default_model == "deepseek-v4.1-flash"
+    assert room["ai_settings"].base_url == "https://custom.endpoint.com/v1"
+    main.active_rooms.clear()
+
+

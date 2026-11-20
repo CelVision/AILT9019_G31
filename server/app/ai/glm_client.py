@@ -1,8 +1,8 @@
-"""GLM client for the PvE opponent (currently GLM-4.5-Air).
+"""OpenAI-compatible move client for the PvE opponent (Qwen3.6-Flash).
 
-The provider exposes an OpenAI-compatible ``/chat/completions`` endpoint. This
-module keeps the network call, prompt, parsing, and validation in one place so
-the WebSocket gateway (WP3-3) only has to ask for a move.
+The active deployment uses Alibaba Cloud Bailian. The module and symbol names
+retain their historical GLM names for import compatibility, but the request
+path is provider-neutral.
 
 Security: the API key is read from :mod:`app.config` and is only ever placed in
 the outbound Authorization header. It is never logged, returned, or included in
@@ -130,7 +130,7 @@ async def request_glm_move(
     settings: AISettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> GLMMove:
-    """Ask GLM for one move.
+    """Ask the configured AI provider for one move.
 
     ``transport`` is injectable so tests can exercise the full parse/validate
     path without a network call or a real key.
@@ -151,8 +151,8 @@ async def request_glm_move(
     payload = {
         "model": selected_model,
         "messages": build_messages(board, legal),
-        # GLM-4.7 enables thinking by default. A game move needs one small JSON
-        # object quickly, so disable reasoning tokens for this call.
+        # A game move needs one small JSON object quickly. Ask compatible
+        # providers to skip reasoning tokens; unknown fields are ignored.
         "thinking": {"type": "disabled"},
         "temperature": 0.2,
         "max_tokens": 64,
@@ -204,7 +204,7 @@ def _main() -> None:
     cfg = get_ai_settings()
     if not cfg.enabled:
         raise SystemExit(
-            "GLM_API_KEY is not set. Copy server/.env.example to server/.env "
+            "AI_API_KEY is not set. Copy server/.env.example to server/.env "
             "and add the key (never commit it)."
         )
 
@@ -212,7 +212,7 @@ def _main() -> None:
     try:
         move = asyncio.run(request_glm_move(empty_board, settings=cfg))
     except GLMError as exc:
-        raise SystemExit(f"GLM smoke test failed: {exc.reason}") from exc
+        raise SystemExit(f"AI move smoke test failed: {exc.reason}") from exc
 
     print(
         json.dumps(

@@ -16,10 +16,12 @@ from dotenv import load_dotenv
 SERVER_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(SERVER_DIR / ".env")
 
-DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
-DEFAULT_MODEL = "glm-4.5-air"
-# Temporary model while GLM-4.7-Flash access is enabled. The live Connect Four
-# prompt measured ~2.3–2.9s, so 3.5s leaves margin for provider queueing/jitter.
+DEFAULT_BASE_URL = (
+    "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+)
+DEFAULT_MODEL = "qwen3.6-flash"
+# Live Connect Four probes returned legal moves in roughly 1.4–3.9s, so 3.5s
+# keeps the UI responsive without dropping too many provider responses.
 DEFAULT_TIMEOUT_SECONDS = 3.5
 
 
@@ -58,20 +60,33 @@ def _parse_timeout(raw: str | None) -> float:
     return min(max(value, 0.5), 10.0)
 
 
+def _env(name: str, legacy_name: str, default: str = "") -> str:
+    """Return the first non-empty value, accepting legacy GLM_* names.
+
+    The GLM_* aliases keep existing local checkouts and VPS environment files
+    working while deployments migrate to the provider-neutral AI_* names.
+    """
+
+    for key in (name, legacy_name):
+        value = os.getenv(key)
+        if value is not None and value.strip():
+            return value.strip()
+    return default
+
+
 def get_ai_settings() -> AISettings:
     """Build settings from the environment on each call (test-friendly)."""
 
-    default_model = os.getenv("GLM_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    base_url = (
-        os.getenv("GLM_BASE_URL", DEFAULT_BASE_URL).strip().rstrip("/")
-        or DEFAULT_BASE_URL
-    )
-    api_key = (os.getenv("GLM_API_KEY") or "").strip() or None
+    default_model = _env("AI_MODEL", "GLM_MODEL", DEFAULT_MODEL)
+    base_url = _env("AI_BASE_URL", "GLM_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    api_key = _env("AI_API_KEY", "GLM_API_KEY") or None
 
     return AISettings(
         api_key=api_key,
         base_url=base_url,
         default_model=default_model,
-        allowed_models=_parse_models(os.getenv("GLM_ALLOWED_MODELS"), default_model),
+        allowed_models=_parse_models(
+            _env("AI_ALLOWED_MODELS", "GLM_ALLOWED_MODELS"), default_model
+        ),
         timeout_seconds=_parse_timeout(os.getenv("AI_TIMEOUT_SECONDS")),
     )

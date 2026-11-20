@@ -12,7 +12,7 @@ Environment="PYTHONUNBUFFERED=1"
 Environment="PYTHONDONTWRITEBYTECODE=1"
 # Keep secrets outside the repository. Create this file with:
 #   sudo install -m 640 -o root -g www-data /dev/null /etc/connectfour/connectfour.env
-# and add GLM_API_KEY=... (never commit the real key).
+# and add AI_API_KEY=... (never commit the real key).
 EnvironmentFile=-/etc/connectfour/connectfour.env
 # Single worker is required: matchmaking queues and rooms live in this process's RAM.
 # Multiple workers would put players in separate, invisible matchmaking pools.

@@ -1,1 +1,1 @@
-"""AI opponent adapters (GLM primary; Minimax retained for the fallback phase)."""
+"""AI opponent adapters (Qwen3.6-Flash primary; Minimax fallback)."""

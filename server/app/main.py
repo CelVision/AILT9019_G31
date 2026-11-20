@@ -12,9 +12,10 @@ from typing import Dict, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
-from app.config import get_ai_settings
+from app.config import AISettings, get_ai_settings
 from app.game_engine import ConnectFourEngine
-from app.matchmaking import MatchmakingQueue, QueueEntry
+from app.matchmaking import MatchmakingQueue, QueueEntry, QueueRejected
+from app.room_manager import RoomManager
 from app.ai.glm_client import GLMError, request_glm_move, safe_legal_column
 from app.ai.minimax_fallback import get_minimax_move
 from app.ai.chat_agent import DAILY_TOPICS, generate_chat_reply
@@ -37,12 +38,10 @@ matching_pool: List[Dict] = []
 # needs the richer registration record (including birth year).
 matchmaking = MatchmakingQueue(timeout_seconds=QUEUE_TIMEOUT_SECONDS)
 
-# Active Game Rooms
-# room_id -> Room Data
-active_rooms: Dict[str, Dict] = {}
-# Finished rooms are retained briefly so both PvP players can request a
-# rematch without entering the general matchmaking queue again.
-finished_rooms: Dict[str, Dict] = {}
+# In-memory Room Manager (WP2-3)
+room_manager = RoomManager()
+active_rooms: Dict[str, Dict] = room_manager.active_rooms
+finished_rooms: Dict[str, Dict] = room_manager.finished_rooms
 
 
 class ConnectionManager:
@@ -137,17 +136,7 @@ async def send_room_event(room: dict, msg_type: str, payload: dict) -> None:
 
 
 def remember_finished_room(room: dict) -> None:
-    finished_rooms[room["room_id"]] = {
-        "room_id": room["room_id"],
-        "is_pve": room["is_pve"],
-        "p1": room["p1"],
-        "p2": room["p2"],
-        "rematch_requests": set(),
-        "finished_at": time.time(),
-        "chat_history": room.get("chat_history", []),
-        "last_chat_time": room.get("last_chat_time", {}),
-        "ended": True,
-    }
+    room_manager.remember_finished_room(room)
 
 
 async def finish_room(room: dict, payload: dict) -> None:
@@ -173,25 +162,12 @@ async def expire_turn(room: dict) -> None:
 
 
 def find_room_for_session(session_id: str) -> tuple[str | None, dict | None]:
-    for room_id, room in active_rooms.items():
-        if room["p1"]["session_id"] == session_id:
-            return room_id, room
-        if not room["is_pve"] and room["p2"]["session_id"] == session_id:
-            return room_id, room
-    return None, None
+    return room_manager.find_room_for_session(session_id)
 
 
 def find_room_for_chat(session_id: str) -> tuple[str | None, dict | None]:
     """Find an active or finished room so players can chat during and after match."""
-    room_id, room = find_room_for_session(session_id)
-    if room:
-        return room_id, room
-    for r_id, r in finished_rooms.items():
-        if r["p1"]["session_id"] == session_id:
-            return r_id, r
-        if not r["is_pve"] and r["p2"]["session_id"] == session_id:
-            return r_id, r
-    return None, None
+    return room_manager.find_room_for_chat(session_id)
 
 
 @app.get("/health")
@@ -341,7 +317,7 @@ async def create_pve_match(user: dict | QueueEntry):
     bot_user = {
         "ws": None,
         "session_id": "bot",
-        "nickname": "GLM Bot",
+        "nickname": "AI Coach",
         "age": user["age"],
         "is_bot": True
     }
@@ -357,13 +333,28 @@ async def create_pve_match(user: dict | QueueEntry):
         "chat_history": [],
         "last_chat_time": {},
     }
+
+    custom = user.get("custom_ai") or {}
+    base_settings = get_ai_settings()
+    custom_key = str(custom.get("api_key", "")).strip() or None
+    custom_model = str(custom.get("model", "")).strip() or base_settings.default_model
+    custom_base_url = str(custom.get("base_url", "")).strip() or base_settings.base_url
+    if custom_key or custom_model != base_settings.default_model or custom_base_url != base_settings.base_url:
+        room["ai_settings"] = AISettings(
+            api_key=custom_key or base_settings.api_key,
+            base_url=custom_base_url or base_settings.base_url,
+            default_model=custom_model,
+            allowed_models=(*base_settings.allowed_models, custom_model) if custom_model else base_settings.allowed_models,
+            timeout_seconds=base_settings.timeout_seconds,
+        )
+
     active_rooms[room_id] = room
 
     await manager.send_json(user["ws"], "match_found", {
         "room_id": room_id,
         "is_pve": True,
         "assigned_player": 1,
-        "opponent_nickname": "GLM Bot",
+        "opponent_nickname": "AI Coach",
         "opponent_age": user["age"],
         "turn_duration_seconds": TURN_DURATION_SECONDS,
         "daily_topics": DAILY_TOPICS,
@@ -411,28 +402,49 @@ async def websocket_endpoint(websocket: WebSocket):
                     await manager.send_json(websocket, "error", error)
                     continue
 
+                active_room_id, _ = find_room_for_session(session_id)
+                if active_room_id:
+                    await manager.send_json(
+                        websocket,
+                        "error",
+                        protocol_error("already_in_game", "You are already in an active game."),
+                    )
+                    continue
+
                 # A browser can retry after a reconnect; do not enqueue the
                 # same socket twice.
                 matching_pool[:] = [
                     user for user in matching_pool if user["session_id"] != session_id
                 ]
                 matchmaking.remove(session_id)
+                custom_ai = payload.get("custom_ai")
+                if not isinstance(custom_ai, dict):
+                    custom_ai = None
+
                 user = {
                     "ws": websocket,
                     "session_id": session_id,
                     **registration,
+                    "custom_ai": custom_ai,
                     "queued_at": time.time(),
                     "last_status_at": 0.0,
                 }
-                matching_pool.append(user)
-                matchmaking.add(QueueEntry(
+                queue_entry = QueueEntry(
                     session_id=session_id,
                     nickname=registration["nickname"],
                     birth_year=registration["birth_year"],
                     age=registration["age"],
                     ws=websocket,
                     queued_at=user["queued_at"],
-                ))
+                    custom_ai=custom_ai,
+                )
+                try:
+                    matchmaking.add(queue_entry)
+                    matching_pool.append(user)
+                except QueueRejected as e:
+                    await manager.send_json(websocket, "error", e.as_payload())
+                    continue
+
                 await manager.send_json(websocket, "queue_status", _queue_status(user))
 
             elif msg_type == "player_move":
@@ -565,7 +577,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     except (ValueError, TypeError):
                         pass
 
-                if not text and selected_topic:
+                # Section 5 Ethics & Safety guardrail:
+                # In PvP matches between human strangers, free-form text chat is restricted to
+                # pre-approved Daily Icebreaker Cards to prevent toxicity and PII leaks.
+                if not room["is_pve"]:
+                    if not selected_topic:
+                        await manager.send_json(
+                            websocket,
+                            "error",
+                            protocol_error("pvp_chat_restricted", "In PvP matches, please use the Daily Icebreaker Cards to share topics safely."),
+                        )
+                        continue
+                    # Force canonical topic text in PvP to prevent arbitrary text bypass
+                    text = f"{selected_topic['label']} — {selected_topic['prompt']}"
+                elif not text and selected_topic:
                     text = f"{selected_topic['label']} — {selected_topic['prompt']}"
 
                 if not text:
@@ -581,17 +606,6 @@ async def websocket_endpoint(websocket: WebSocket):
                         websocket,
                         "error",
                         protocol_error("message_too_long", "Chat message must be 140 characters or fewer."),
-                    )
-                    continue
-
-                # Section 5 Ethics & Safety guardrail:
-                # In PvP matches between human strangers, free-form text chat is restricted to
-                # pre-approved Daily Icebreaker Cards to prevent toxicity and PII leaks.
-                if not room["is_pve"] and not selected_topic:
-                    await manager.send_json(
-                        websocket,
-                        "error",
-                        protocol_error("pvp_chat_restricted", "In PvP matches, please use the Daily Icebreaker Cards to share topics safely."),
                     )
                     continue
 
@@ -616,13 +630,16 @@ async def websocket_endpoint(websocket: WebSocket):
                     asyncio.create_task(handle_ai_chat_turn(room))
 
             elif msg_type == "rematch_request":
-                finished = next(
-                    (
-                        room for room in finished_rooms.values()
-                        if room["p1"]["session_id"] == session_id
-                        or (not room["is_pve"] and room["p2"]["session_id"] == session_id)
-                    ),
-                    None,
+                candidates = [
+                    room
+                    for room in finished_rooms.values()
+                    if room["p1"]["session_id"] == session_id
+                    or (not room["is_pve"] and room["p2"]["session_id"] == session_id)
+                ]
+                finished = (
+                    max(candidates, key=lambda r: r.get("finished_at", 0))
+                    if candidates
+                    else None
                 )
                 if not finished:
                     await manager.send_json(
@@ -672,8 +689,12 @@ async def handle_ai_chat_turn(room: dict):
         return
 
     history = room.get("chat_history", [])
+    settings = room.get("ai_settings")
     try:
-        reply = await generate_chat_reply(history)
+        if settings is not None:
+            reply = await generate_chat_reply(history, settings=settings)
+        else:
+            reply = await generate_chat_reply(history)
     except Exception:
         reply = "Good game! That was a really fun match!"
 
@@ -697,23 +718,23 @@ async def handle_ai_chat_turn(room: dict):
 
 
 async def handle_ai_turn(room: dict):
-    """Execute a GLM PvE move and fall back to the local Minimax bot."""
+    """Execute a primary-AI PvE move and fall back to the local Minimax bot."""
     await asyncio.sleep(0.4)  # Natural human-like pause
     if room.get("ended"):
         return
     engine = room["engine"]
-    settings = get_ai_settings()
+    settings = room.get("ai_settings") or get_ai_settings()
 
     ai_col = None
-    glm_move = None
+    ai_move = None
     fallback_reason = None
 
     try:
-        glm_move = await asyncio.wait_for(
+        ai_move = await asyncio.wait_for(
             request_glm_move(engine.get_board(), settings=settings),
             timeout=settings.timeout_seconds,
         )
-        ai_col = glm_move.column
+        ai_col = ai_move.column
     except asyncio.TimeoutError:
         fallback_reason = "timeout"
     except GLMError as exc:
@@ -731,7 +752,7 @@ async def handle_ai_turn(room: dict):
         if fallback_reason and not room.get("fallback_notified"):
             room["fallback_notified"] = True
             await manager.send_json(room["p1"]["ws"], "pve_fallback_notice", {
-                "message": f"GLM unavailable ({fallback_reason}); fallback to the local {strategy} bot.",
+                "message": f"AI Coach unavailable ({fallback_reason}); fallback to the local {strategy} bot.",
                 "reason": fallback_reason,
                 "strategy": strategy,
             })
@@ -749,7 +770,7 @@ async def handle_ai_turn(room: dict):
             await finish_room(room, {"winner": 0, "reason": "draw"})
             return
         ai_col = safe_col
-        glm_move = None  # The GLM move was not applied; do not send its reaction.
+        ai_move = None  # The AI move was not applied; do not send its reaction.
         success, row = engine.drop_token(ai_col, player=2)
         if not success:
             return
@@ -766,11 +787,11 @@ async def handle_ai_turn(room: dict):
     }
     await manager.send_json(room["p1"]["ws"], "board_update", update_payload)
 
-    if glm_move and glm_move.canned_reaction_id and not is_win:
+    if ai_move and ai_move.canned_reaction_id and not is_win:
         await manager.send_json(room["p1"]["ws"], "broadcast_reaction", {
             "from_player": 2,
             "category": "phrase",
-            "id": glm_move.canned_reaction_id,
+            "id": ai_move.canned_reaction_id,
         })
 
     if is_win:

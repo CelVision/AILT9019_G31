@@ -9,10 +9,15 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     environment:
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_ALLOWED_MODELS: ${AI_ALLOWED_MODELS:-}
+      # Legacy aliases remain available while deployments migrate to AI_*.
       GLM_API_KEY: ${GLM_API_KEY:-}
-      GLM_BASE_URL: ${GLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
-      GLM_MODEL: ${GLM_MODEL:-glm-4.5-air}
-      GLM_ALLOWED_MODELS: ${GLM_ALLOWED_MODELS:-glm-4.5-air}
+      GLM_BASE_URL: ${GLM_BASE_URL:-}
+      GLM_MODEL: ${GLM_MODEL:-}
+      GLM_ALLOWED_MODELS: ${GLM_ALLOWED_MODELS:-}
       AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-3.5}
     init: true
     restart: unless-stopped
