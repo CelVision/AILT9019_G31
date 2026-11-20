@@ -1,0 +1,95 @@
+1
+00:00:00,500 --> 00:00:06,800
+[Yuzhou Zhou] Hello everyone! I'm Yuzhou Zhou, team lead for Group 31.
+
+2
+00:00:07,000 --> 00:00:15,500
+[Yuzhou Zhou] Modern university students experience substantial conversational anxiety on mainstream social platforms.
+
+3
+00:00:15,800 --> 00:00:23,500
+[Yuzhou Zhou] Appearance-driven swiping and unguided direct messaging create fear of superficial judgment and conversational paralysis.
+
+4
+00:00:23,800 --> 00:00:31,000
+[Yuzhou Zhou] With ConnectFour Connect, we introduce an activity-mediated social paradigm: interpersonal interaction is centered around turn-based Connect Four.
+
+5
+00:00:31,200 --> 00:00:37,500
+[Yuzhou Zhou] Game moves provide organic conversational pacing and dramatically lower emotional friction.
+
+6
+00:00:37,800 --> 00:00:44,500
+[Yuzhou Zhou] Guest onboarding is lightweight and collects zero persistent PII—players simply enter a nickname and birth year.
+
+7
+00:00:45,000 --> 00:00:51,500
+[Yuexiang Ma] Hi, I'm Yuexiang Ma, backend systems and QA lead.
+
+8
+00:00:51,800 --> 00:00:59,200
+[Yuexiang Ma] I designed our in-memory FIFO matchmaking queue and room lifecycle manager.
+
+9
+00:00:59,500 --> 00:01:07,000
+[Yuexiang Ma] Our queue enforces an age filter where only peers with an age gap within three years are paired together, while rejecting registrations under eighteen.
+
+10
+00:01:07,300 --> 00:01:15,800
+[Yuexiang Ma] To eliminate waiting times, if no compatible peer matches within our fifteen-second timeout, the engine automatically spins up a PvE room with our AI Coach.
+
+11
+00:01:16,000 --> 00:01:22,800
+[Yuexiang Ma] In PvP matches, free-form text is structurally blocked by architectural design.
+
+12
+00:01:23,000 --> 00:01:29,800
+[Yuexiang Ma] Players communicate exclusively through sportsmanlike canned phrases and Daily Icebreakers, completely eliminating peer harassment.
+
+13
+00:01:30,200 --> 00:01:36,500
+[Leo Shang] Hello, I'm Leo Shang, frontend client lead.
+
+14
+00:01:36,800 --> 00:01:44,500
+[Leo Shang] I developed the HTML5 Canvas 2D game board and client interaction layer.
+
+15
+00:01:44,800 --> 00:01:52,500
+[Leo Shang] We use a unified Pointer Events architecture that seamlessly normalizes multi-touch, stylus, and desktop mouse clicks with responsive coordinate scaling.
+
+16
+00:01:52,800 --> 00:02:00,500
+[Leo Shang] Notice the smooth vertical gravity descent animation as tokens drop into the lowest vacant slot, and our glowing cyan indicator marking the most recent move.
+
+17
+00:02:00,800 --> 00:02:08,000
+[Leo Shang] Floating speech bubbles render real-time sportsmanship reactions with smooth CSS animations.
+
+18
+00:02:08,200 --> 00:02:14,800
+[Leo Shang] I also implemented procedural sound synthesis using the native Web Audio API—synthesizing token drops, victory arpeggios, and reaction pops with zero MP3 assets.
+
+19
+00:02:15,200 --> 00:02:22,000
+[Scott Xiang] Hi everyone, I'm Scott Xiang, DevOps and deployment lead.
+
+20
+00:02:22,300 --> 00:02:30,500
+[Scott Xiang] In PvE mode, we integrated Alibaba Cloud Bailian's Qwen3.6-Flash through an OpenAI-compatible endpoint.
+
+21
+00:02:30,800 --> 00:02:37,800
+[Scott Xiang] The AI Coach acts as an engaging campus peer while enforcing strict conversational safety guardrails.
+
+22
+00:02:38,000 --> 00:02:46,000
+[Scott Xiang] If the upstream API times out past 3.5 seconds or encounters rate limits, our local depth-4 Minimax algorithm immediately calculates the move in under 24 milliseconds.
+
+23
+00:02:46,300 --> 00:02:53,500
+[Scott Xiang] On the infrastructure side, the platform runs in a hardened non-root container with read-only filesystems.
+
+24
+00:02:53,800 --> 00:02:59,500
+[Scott Xiang] ConnectFour Connect delivers a safe, zero-latency, anxiety-free social gaming experience. Thank you!
