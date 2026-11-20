@@ -217,7 +217,7 @@ Small, low-risk tasks that can be picked up without touching the AI integration.
 ### WP1: Final Polish & Stretch Features
 - [x] **[DONE]** `WP1-7`: Add sound effects (token drop sound, win chime, sticker pop) | **Assignee**: @Team | **Completed**: 2026-11-20
   - Synthesized Web Audio API sound effects (`client/js/sound_effects.js`) without external assets or network bandwidth.
-- [x] **[DONE]** `WP1-8`: Implement post-game mutual rematch button | **Assignee**: @David | **Completed**: 2026-10-26
+- [x] **[DONE]** `WP1-8`: Implement post-game mutual rematch button | **Assignee**: @Yuzhou Zhou | **Completed**: 2026-10-26
   - Allow paired players to click "Rematch" without re-entering matchmaking queue.
 
 ---
@@ -239,16 +239,16 @@ Small, low-risk tasks that can be picked up without touching the AI integration.
 > - **In PvE Mode (Human vs. AI Bot)**: Safe for interactive text chatting. The player can chat directly with `AI Coach` (Alibaba Cloud Bailian / Qwen3.6-Flash) about game strategies and daily university life ("How's your semester?", "Study tips", etc.). Zero risk of peer harassment or PII leakage since the counterpart is an AI.
 > - **In PvP Mode (Human vs. Human)**: Preserves the Section 5 safety promise (no unmoderated free-text chat). Instead, players get **"Daily Icebreaker Cards"** (curated daily conversation prompts / casual discussion starters like campus spots, music, weekend plans) that can be sent with one tap.
 
-- [x] **[DONE]** `WP3-9`: PvE Conversational LLM Engine (`server/app/ai/chat_agent.py`) | **Assignee**: @David | **Completed**: 2026-10-26
+- [x] **[DONE]** `WP3-9`: PvE Conversational LLM Engine (`server/app/ai/chat_agent.py`) | **Assignee**: @Yuzhou Zhou | **Completed**: 2026-10-26
   - Ephemeral conversational context for PvE room (sliding 6 message memory per match).
   - Friendly collegiate peer system prompt with strict refusal of PII/harmful queries.
   - Asynchronous background response generation with Bailian Qwen3.6-Flash integration.
-- [x] **[DONE]** `WP1-9`: In-Game Match Hub Sidebar & Daily Topic Cards (`client/index.html`, `client/css/style.css`, `client/js/app.js`) | **Assignee**: @David | **Completed**: 2026-10-26
+- [x] **[DONE]** `WP1-9`: In-Game Match Hub Sidebar & Daily Topic Cards (`client/index.html`, `client/css/style.css`, `client/js/app.js`) | **Assignee**: @Yuzhou Zhou | **Completed**: 2026-10-26
   - Sleek dual-column sidebar layout alongside the board with sticky Match Hub, Daily Icebreakers, and typing indicator.
   - Interactive input field (active in PvE mode) with send button and character counter (max 140 chars).
   - Quick-tap "Daily Icebreaker Cards" (active in both PvP and PvE) with 4 collegiate conversation starters.
   - Dynamic speech bubble rendering for player, opponent, and AI Coach.
-- [x] **[DONE]** `WP2-7`: WebSocket Conversational Event Protocol (`server/app/main.py`) | **Assignee**: @David | **Completed**: 2026-10-26
+- [x] **[DONE]** `WP2-7`: WebSocket Conversational Event Protocol (`server/app/main.py`) | **Assignee**: @Yuzhou Zhou | **Completed**: 2026-10-26
   - Route C2S `chat_send` and S2C `chat_message` / `chat_reply`.
   - Rate limiting (max 1 message per 2 seconds per client) to prevent spam.
   - Input validation, length bounds ($\le 140$ chars), and PvP safety guardrail enforcement.

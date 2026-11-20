@@ -51,6 +51,12 @@ def build_release_package() -> Path:
     DIST_DIR.mkdir(parents=True, exist_ok=True)
     zip_path = DIST_DIR / f"{PACKAGE_NAME}.zip"
 
+    # Ensure FINAL_PROJECT_REPORT.pdf exists before packaging
+    pdf_report = ROOT_DIR / "docs" / "FINAL_PROJECT_REPORT.pdf"
+    if not pdf_report.exists():
+        print("      * Generating FINAL_PROJECT_REPORT.pdf before packaging...")
+        subprocess.run([sys.executable, str(ROOT_DIR / "docs" / "generate_pdf.py")], cwd=ROOT_DIR, check=True)
+
     # Excluded directories and patterns
     exclude_dirs = {".git", ".pytest_cache", "__pycache__", "venv", ".venv", "env", "dist"}
     exclude_files = {".env"} # Never include live local development .env
@@ -70,10 +76,15 @@ def build_release_package() -> Path:
             archive_name = f"{PACKAGE_NAME}/{file_path.relative_to(ROOT_DIR).as_posix()}"
             zipf.write(file_path, archive_name)
 
-        # Include a clean, empty server/.env created directly from server/.env.example
+        # Include clean empty server/.env created directly from server/.env.example
         example_env = ROOT_DIR / "server" / ".env.example"
         if example_env.exists():
             zipf.writestr(f"{PACKAGE_NAME}/server/.env", example_env.read_text(encoding="utf-8"))
+
+        # Explicitly ensure FINAL_PROJECT_REPORT.pdf is at root of the submission archive
+        if pdf_report.exists():
+            zipf.write(pdf_report, f"{PACKAGE_NAME}/FINAL_PROJECT_REPORT.pdf")
+            print("      ✓ Embedded FINAL_PROJECT_REPORT.pdf at release root and in docs/")
 
     print(f"      ✓ Packaged clean release archive: {zip_path}")
     return zip_path
