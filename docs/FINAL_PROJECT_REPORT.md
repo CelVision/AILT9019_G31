@@ -4,7 +4,7 @@
 
 *Report identification: give the team ID, project title and repository URL. Link the public webpage and both YouTube videos. List member names in Section 6.*  
 **Team ID:** G31 · **Project:** ConnectFour Connect · **Repository:** https://github.com/CelVision/AILT9019_G31  
-**Public webpage:** https://celvision.github.io/AILT9019_G31/ · **Presentation YouTube link:** https://youtu.be/AILT9019_G31_pres · **Demo YouTube link:** https://youtu.be/AILT9019_G31_demo  
+**Public webpage:** https://celvision.github.io/AILT9019_G31/ · **Presentation YouTube link:** https://youtu.be/DmWemf1uMAY · **Demo YouTube link:** https://youtu.be/kRcLGwUyppU  
 
 ---
 

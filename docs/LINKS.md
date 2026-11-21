@@ -1,0 +1,18 @@
+# AILT9019 · AI Literacy II (Autumn 2026)
+## Final Project Submission — Project Links
+
+* **Team ID:** Group 31 (G31)
+* **Project Title:** ConnectFour Connect: Activity-Mediated Social Mini-Game with Multi-Tier AI Architecture
+* **Public Project Webpage:** [https://celvision.github.io/AILT9019_G31/](https://celvision.github.io/AILT9019_G31/)
+* **GitHub Repository:** [https://github.com/CelVision/AILT9019_G31](https://github.com/CelVision/AILT9019_G31)  
+  *(The repository is public and accessible to the teaching team)*
+* **Presentation Video (YouTube):** [https://youtu.be/DmWemf1uMAY](https://youtu.be/DmWemf1uMAY)
+* **Demo Video (YouTube):** [https://youtu.be/kRcLGwUyppU](https://youtu.be/kRcLGwUyppU)
+
+---
+
+### Team Members & Contributions
+* **Yuzhou Zhou** (Team Lead, Full-Stack Architecture, LLM & Minimax Orchestration) — Effort: **34%**
+* **Scott Xiang** (DevOps Lead, Containerization, Systemd, Nginx & Endpoint Validation) — Effort: **22%**
+* **Leo Shang** (Frontend Client Lead, HTML5 Canvas Engine, Pointer Input & Audio Synthesis) — Effort: **22%**
+* **Yuexiang Ma** (Backend Systems Lead, Matchmaking Queue, Test Suites A/B & Cohort Evaluation) — Effort: **22%**

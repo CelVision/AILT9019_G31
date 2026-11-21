@@ -81,18 +81,54 @@ def build_release_package() -> Path:
         if example_env.exists():
             zipf.writestr(f"{PACKAGE_NAME}/server/.env", example_env.read_text(encoding="utf-8"))
 
-        # Explicitly ensure report.pdf and FINAL_PROJECT_REPORT.pdf are at root of the submission archive
-        if pdf_report.exists():
+        written_names = set(zipf.namelist())
+        # Explicitly ensure report.pdf, FINAL_PROJECT_REPORT.pdf, and links.txt are at release root
+        if pdf_report.exists() and f"{PACKAGE_NAME}/report.pdf" not in written_names:
             zipf.write(pdf_report, f"{PACKAGE_NAME}/report.pdf")
+            written_names.add(f"{PACKAGE_NAME}/report.pdf")
+        if pdf_report.exists() and f"{PACKAGE_NAME}/FINAL_PROJECT_REPORT.pdf" not in written_names:
             zipf.write(pdf_report, f"{PACKAGE_NAME}/FINAL_PROJECT_REPORT.pdf")
-            print("      ✓ Embedded report.pdf and FINAL_PROJECT_REPORT.pdf at release root and in docs/")
+            written_names.add(f"{PACKAGE_NAME}/FINAL_PROJECT_REPORT.pdf")
+
+        links_txt = ROOT_DIR / "LINKS.txt"
+        links_md = ROOT_DIR / "docs" / "LINKS.md"
+        if links_txt.exists() and f"{PACKAGE_NAME}/links.txt" not in written_names:
+            zipf.write(links_txt, f"{PACKAGE_NAME}/links.txt")
+            written_names.add(f"{PACKAGE_NAME}/links.txt")
 
     print(f"      ✓ Packaged clean release archive: {zip_path}")
     return zip_path
 
 
+def build_submission_package() -> Path:
+    print("[3b/4] Building course submission zip (Report PDF + Links file)...")
+    DIST_DIR.mkdir(parents=True, exist_ok=True)
+    sub_zip_path = DIST_DIR / "AILT9019_G31_Submission.zip"
+
+    pdf_report = ROOT_DIR / "docs" / "report.pdf"
+    pdf_final = ROOT_DIR / "docs" / "FINAL_PROJECT_REPORT.pdf"
+    docx_report = ROOT_DIR / "docs" / "AILT9019_Final_Report_G31.docx"
+    links_txt = ROOT_DIR / "LINKS.txt"
+    links_md = ROOT_DIR / "docs" / "LINKS.md"
+
+    with zipfile.ZipFile(sub_zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        if pdf_report.exists():
+            zipf.write(pdf_report, "report.pdf")
+            zipf.write(pdf_report, "FINAL_PROJECT_REPORT.pdf")
+        if links_txt.exists():
+            zipf.write(links_txt, "links.txt")
+            zipf.write(links_txt, "LINKS.txt")
+        if links_md.exists():
+            zipf.write(links_md, "LINKS.md")
+        if docx_report.exists():
+            zipf.write(docx_report, "AILT9019_Final_Report_G31.docx")
+
+    print(f"      ✓ Packaged course submission zip: {sub_zip_path}")
+    return sub_zip_path
+
+
 def compute_checksum(file_path: Path):
-    print("[4/4] Generating package verification checksum...")
+    print(f"[4/4] Generating checksum for {file_path.name}...")
     sha256 = hashlib.sha256()
     with open(file_path, "rb") as f:
         while chunk := f.read(65536):
@@ -112,6 +148,8 @@ def main():
         sys.exit(1)
     pkg = build_release_package()
     compute_checksum(pkg)
+    sub_pkg = build_submission_package()
+    compute_checksum(sub_pkg)
     print("\nRelease packaging completed successfully! Zero key exposure risk.")
 
 
