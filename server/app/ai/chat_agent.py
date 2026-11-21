@@ -7,12 +7,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 from typing import List, Dict, Any
 
 import httpx
 
 from app.config import AISettings, get_ai_settings
+
+logger = logging.getLogger("chat_agent")
 
 SYSTEM_PROMPT = (
     "You are AI Coach, a friendly, encouraging university student classmate playing Connect Four. "
@@ -76,6 +79,12 @@ async def generate_chat_reply(
                 reply = data["choices"][0]["message"]["content"].strip()
                 return reply
             else:
+                logger.warning(
+                    "AI chat upstream provider HTTP %d: %s. Using collegiate fallback.",
+                    resp.status_code,
+                    resp.text[:200],
+                )
                 return "Good game! Let's see your next token drop!"
-    except Exception:
+    except Exception as exc:
+        logger.warning("AI chat request exception: %s. Using collegiate fallback.", exc)
         return "Thinking about my next move here! Good luck!"
