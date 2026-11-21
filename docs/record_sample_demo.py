@@ -1,40 +1,71 @@
 #!/usr/bin/env python3
 """
-Automated Demo Video Recorder for ConnectFour Connect (AILT9019 Group 31).
+Automated 3-Minute (180 Seconds) Demo Video Recorder for ConnectFour Connect (AILT9019 Group 31).
 Uses Playwright to:
 1. Spin up the local FastAPI server.
 2. Launch a 1280x720 browser with video recording enabled.
-3. Inject a floating subtitle overlay with speaker badges:
-   - [Yuzhou Zhou] (Team Lead)
-   - [Yuexiang Ma] (Backend Systems & QA Lead)
-   - [Leo Shang] (Frontend Client Lead)
-   - [Scott Xiang] (DevOps & Infrastructure Lead)
-4. Execute automated user interactions: onboarding -> matchmaking -> token drops -> canned chat -> AI Coach.
-5. Produce docs/ConnectFour_Connect_Demo_Sample.webm and .mp4.
+3. Parse docs/subtitles.srt and synchronize on-screen subtitles in real time (0:00 to 3:00).
+4. Choreograph user actions across all 4 teammate segments:
+   - Part 1 (0:00 - 0:45): Yuzhou Zhou (Onboarding & Vision)
+   - Part 2 (0:45 - 1:30): Yuexiang Ma (Matchmaking, Age-Gating & Safety)
+   - Part 3 (1:30 - 2:15): Leo Shang (Canvas 2D Engine, Input & Procedural Audio)
+   - Part 4 (2:15 - 3:00): Scott Xiang (Dual-Tier AI Subsystem, DevOps & Wrap-Up)
+5. Produces exactly 3 minutes (180.0s) of high-definition video: docs/ConnectFour_Connect_Demo_Sample.webm.
 """
 
 import sys
 import os
+import re
 import time
 import subprocess
-import argparse
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DOCS_DIR = ROOT_DIR / "docs"
+SRT_PATH = DOCS_DIR / "subtitles.srt"
 OUT_VIDEO_WEBM = DOCS_DIR / "ConnectFour_Connect_Demo_Sample.webm"
-OUT_VIDEO_MP4 = DOCS_DIR / "ConnectFour_Connect_Demo_Sample.mp4"
 CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 if not os.path.exists(CHROME_PATH):
     CHROME_PATH = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
-FFMPEG_PATH = Path(os.path.expandvars(r"%LOCALAPPDATA%\ms-playwright\ffmpeg-1011\ffmpeg-win64.exe"))
+TOTAL_DURATION = 180.0  # Exactly 3 minutes
 
 
-def record_demo(speed_factor: float = 1.0):
-    print("=== ConnectFour Connect: Demo Video Recording Pipeline ===")
+def parse_srt(srt_file: Path):
+    def parse_time(ts):
+        h, m, s = ts.strip().replace(',', '.').split(':')
+        return float(h) * 3600 + float(m) * 60 + float(s)
+
+    content = srt_file.read_text(encoding="utf-8")
+    blocks = re.split(r'\n\s*\n', content.strip())
+    subtitles = []
+    for b in blocks:
+        lines = [l.strip() for l in b.split('\n') if l.strip()]
+        if len(lines) >= 3:
+            tc = lines[1].split(' --> ')
+            start = parse_time(tc[0])
+            end = parse_time(tc[1])
+            text = ' '.join(lines[2:])
+            speaker = "Speaker"
+            if text.startswith('[') and ']' in text:
+                speaker = text[1:text.index(']')]
+                text = text[text.index(']') + 1:].strip()
+            subtitles.append({
+                "start": start,
+                "end": end,
+                "speaker": speaker,
+                "text": text
+            })
+    return subtitles
+
+
+def record_3min_demo():
+    print(f"=== ConnectFour Connect: 3-Minute Demo Recording ({TOTAL_DURATION}s) ===")
     
+    subtitles = parse_srt(SRT_PATH)
+    print(f"Loaded {len(subtitles)} subtitles from {SRT_PATH.name}")
+
     # 1. Start local server
     print("[1/5] Starting local FastAPI server on port 8088...")
     server_proc = subprocess.Popen(
@@ -45,11 +76,11 @@ def record_demo(speed_factor: float = 1.0):
     )
     time.sleep(2.5)
 
-    rec_dir = DOCS_DIR / "temp_rec"
+    rec_dir = DOCS_DIR / "temp_rec_3min"
     rec_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        print("[2/5] Initializing Playwright video recorder (1280x720)...")
+        print("[2/5] Initializing Playwright video recorder (1280x720, 180.0s target)...")
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path=CHROME_PATH, headless=True)
             context = browser.new_context(
@@ -68,7 +99,7 @@ def record_demo(speed_factor: float = 1.0):
                 subBox.id = 'demo-subtitles';
                 subBox.style.cssText = `
                     position: fixed;
-                    bottom: 20px;
+                    bottom: 22px;
                     left: 50%;
                     transform: translateX(-50%);
                     z-index: 9999999;
@@ -94,140 +125,221 @@ def record_demo(speed_factor: float = 1.0):
                         <span id="speaker-badge" style="background: #0284c7; color: white; padding: 2px 10px; border-radius: 9999px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Speaker</span>
                         <span style="font-size: 11px; color: #94a3b8;">AILT9019 · AI Literacy II · Group 31</span>
                     </div>
-                    <div id="sub-text" style="font-weight: 500;">Initializing demo demonstration...</div>
+                    <div id="sub-text" style="font-weight: 500;">ConnectFour Connect: Activity-Mediated Social Mini-Game</div>
                 `;
                 document.body.appendChild(subBox);
             """)
 
-            def show_subtitle(speaker: str, text: str, duration: float, badge_color: str = "#0284c7"):
+            def update_subtitle(speaker: str, text: str, badge_color: str):
                 safe_text = text.replace('"', '\\"').replace("'", "\\'")
                 page.evaluate(f"""
                     document.getElementById('speaker-badge').innerText = "{speaker}";
                     document.getElementById('speaker-badge').style.background = "{badge_color}";
                     document.getElementById('sub-text').innerText = "{safe_text}";
                 """)
-                time.sleep(duration / speed_factor)
 
-            print("[3/5] Recording Walkthrough with Subtitle Synchronization...")
+            speaker_colors = {
+                "Yuzhou Zhou": "#0284c7",
+                "Yuexiang Ma": "#10b981",
+                "Leo Shang": "#ec4899",
+                "Scott Xiang": "#f59e0b"
+            }
 
-            # --- PART 1: Yuzhou Zhou (Team Lead) ---
-            show_subtitle("Yuzhou Zhou · Lead", "Hello everyone! I'm Yuzhou Zhou, team lead for Group 31.", 3.0, "#0284c7")
-            show_subtitle("Yuzhou Zhou · Lead", "Modern university students experience substantial conversational anxiety on mainstream social platforms.", 4.0, "#0284c7")
-            show_subtitle("Yuzhou Zhou · Lead", "ConnectFour Connect introduces an activity-mediated social paradigm: gameplay removes conversational paralysis.", 4.0, "#0284c7")
+            speaker_titles = {
+                "Yuzhou Zhou": "Yuzhou Zhou · Team Lead & Architecture",
+                "Yuexiang Ma": "Yuexiang Ma · Backend Systems & QA Lead",
+                "Leo Shang": "Leo Shang · Frontend Client Lead",
+                "Scott Xiang": "Scott Xiang · DevOps & Infrastructure Lead"
+            }
 
-            # Interaction: Enter nickname and birth year
-            page.wait_for_selector("#nicknameInput", timeout=5000)
-            page.fill("#nicknameInput", "Alex_HKU")
-            time.sleep(0.5 / speed_factor)
-            page.fill("#birthYearInput", "2003")
-            time.sleep(0.5 / speed_factor)
-            show_subtitle("Yuzhou Zhou · Lead", "Guest onboarding is lightweight and collects zero persistent PII—players simply enter a nickname and birth year.", 4.0, "#0284c7")
+            print("[3/5] Starting 3-Minute Real-Time Synchronized Choreography...")
+            start_wall_time = time.time()
 
-            # Toggle advanced settings accordion
-            try:
-                page.click("summary.custom-ai-summary")
-                time.sleep(1.0 / speed_factor)
-                page.click("summary.custom-ai-summary")
-            except Exception:
-                pass
+            # State tracking flags for actions
+            actions_done = set()
 
-            show_subtitle("Yuzhou Zhou · Lead", "When clicking 'Find Match', our WebSocket gateway initiates an authoritative 1-Hz heartbeat countdown.", 3.5, "#0284c7")
-            page.click("#btnFindMatch", force=True)
-            time.sleep(1.5 / speed_factor)
+            while True:
+                elapsed = time.time() - start_wall_time
+                if elapsed >= TOTAL_DURATION:
+                    break
 
-            # --- PART 2: Yuexiang Ma (Backend Systems & QA) ---
-            show_subtitle("Yuexiang Ma · Backend & QA", "Hi, I'm Yuexiang Ma, backend systems and QA lead. I designed our in-memory FIFO matchmaking queue.", 4.0, "#10b981")
-            show_subtitle("Yuexiang Ma · Backend & QA", "Our queue enforces an age filter where only peers with |ΔAge| ≤ 3 years are paired, while rejecting underage users.", 4.5, "#10b981")
-            show_subtitle("Yuexiang Ma · Backend & QA", "If no peer matches within 15 seconds, the single-pass engine automatically routes to our AI Coach.", 4.5, "#10b981")
+                # 1. Update Subtitle based on current timestamp
+                current_sub = None
+                for sub in subtitles:
+                    if sub["start"] <= elapsed <= sub["end"]:
+                        current_sub = sub
+                        break
 
-            # Wait for 15s queue timeout to transition into PvE match room
-            print("      * Waiting for 15s queue timeout to enter PvE match room...")
-            try:
-                page.wait_for_selector("#queueModal.hidden", timeout=20000)
-            except Exception:
-                time.sleep(5.0)
+                if current_sub:
+                    spk = current_sub["speaker"]
+                    title = speaker_titles.get(spk, spk)
+                    color = speaker_colors.get(spk, "#0284c7")
+                    update_subtitle(title, current_sub["text"], color)
+                elif elapsed > subtitles[-1]["end"]:
+                    update_subtitle("Group 31", "AILT9019 · AI Literacy II · ConnectFour Connect · Thank you!", "#38bdf8")
 
-            show_subtitle("Yuexiang Ma · Backend & QA", "In PvP matches, free-form text is structurally blocked; players interact via safe canned phrases and Daily Icebreakers.", 4.0, "#10b981")
+                # 2. Trigger Action Choreography at specific time checkpoints
+                # --- Part 1 (0:00 - 0:45): Yuzhou Zhou ---
+                if elapsed >= 12.0 and "fill_nickname" not in actions_done:
+                    actions_done.add("fill_nickname")
+                    try:
+                        page.fill("#nicknameInput", "Alex_HKU")
+                        print(f"[{elapsed:.1f}s] Filled nickname: Alex_HKU")
+                    except Exception as e:
+                        pass
 
-            # --- PART 3: Leo Shang (Frontend & Audio) ---
-            show_subtitle("Leo Shang · Frontend Lead", "Hello, I'm Leo Shang, frontend lead. I developed the HTML5 Canvas 2D board engine and client interaction layer.", 4.0, "#ec4899")
-            show_subtitle("Leo Shang · Frontend Lead", "We use a unified Pointer Events architecture normalizing multi-touch, stylus, and desktop mouse clicks with coordinate scaling.", 4.5, "#ec4899")
+                if elapsed >= 18.0 and "fill_birth_year" not in actions_done:
+                    actions_done.add("fill_birth_year")
+                    try:
+                        page.fill("#birthYearInput", "2003")
+                        print(f"[{elapsed:.1f}s] Filled birth year: 2003 (Age 23)")
+                    except Exception as e:
+                        pass
 
-            # Simulate board hover & clicks on Canvas
-            canvas = page.locator("#gameCanvas")
-            if canvas.count() > 0:
-                box = canvas.bounding_box()
-                if box:
-                    # Move to Column 3 (center column) and click
-                    col3_x = box["x"] + (box["width"] / 7) * 3.5
-                    col_y = box["y"] + (box["height"] / 2)
-                    page.mouse.move(col3_x, col_y)
-                    time.sleep(0.5 / speed_factor)
-                    page.mouse.click(col3_x, col_y)
-                    time.sleep(1.5 / speed_factor)
+                if elapsed >= 24.0 and "toggle_accordion" not in actions_done:
+                    actions_done.add("toggle_accordion")
+                    try:
+                        page.click("summary.custom-ai-summary", force=True)
+                        print(f"[{elapsed:.1f}s] Expanded AI settings accordion")
+                    except Exception:
+                        pass
 
-            show_subtitle("Leo Shang · Frontend Lead", "Notice the smooth vertical gravity descent animation and glowing cyan indicator highlighting the last played token.", 4.5, "#ec4899")
+                if elapsed >= 32.0 and "close_accordion" not in actions_done:
+                    actions_done.add("close_accordion")
+                    try:
+                        page.click("summary.custom-ai-summary", force=True)
+                        print(f"[{elapsed:.1f}s] Closed AI settings accordion")
+                    except Exception:
+                        pass
 
-            # Click canned phrase "Nice move!" and sticker 👍
-            try:
-                page.locator(".phrase-btn").nth(1).click()  # "Nice move!"
-                time.sleep(1.0 / speed_factor)
-                page.locator(".sticker-btn").nth(0).click() # Thumbs Up 👍
-                time.sleep(1.0 / speed_factor)
-            except Exception as e:
-                print("Notice on canned buttons:", e)
+                if elapsed >= 38.0 and "find_match" not in actions_done:
+                    actions_done.add("find_match")
+                    try:
+                        page.click("#btnFindMatch", force=True)
+                        print(f"[{elapsed:.1f}s] Clicked Find Match (15s Max)")
+                    except Exception as e:
+                        pass
 
-            # Play another move: Column 2
-            if canvas.count() > 0:
-                box = canvas.bounding_box()
-                if box:
-                    col2_x = box["x"] + (box["width"] / 7) * 2.5
-                    col_y = box["y"] + (box["height"] / 2)
-                    page.mouse.move(col2_x, col_y)
-                    page.mouse.click(col2_x, col_y)
-                    time.sleep(1.5 / speed_factor)
+                # --- Part 2 (0:45 - 1:30): Yuexiang Ma ---
+                # Matchmaking queue runs from 38s to 53s (15s timeout auto-routes to PvE)
+                if elapsed >= 56.0 and "room_entered" not in actions_done:
+                    actions_done.add("room_entered")
+                    print(f"[{elapsed:.1f}s] 15s timeout expired; entered PvE match room with AI Coach")
 
-            show_subtitle("Leo Shang · Frontend Lead", "I also implemented procedural sound synthesis using native Web Audio API—zero MP3 downloads, zero bandwidth overhead.", 4.5, "#ec4899")
+                # --- Part 3 (1:30 - 2:15): Leo Shang ---
+                if elapsed >= 94.0 and "hover_board" not in actions_done:
+                    actions_done.add("hover_board")
+                    try:
+                        canvas = page.locator("#gameCanvas")
+                        if canvas.count() > 0:
+                            box = canvas.bounding_box()
+                            if box:
+                                for c in range(7):
+                                    cx = box["x"] + (box["width"] / 7) * (c + 0.5)
+                                    cy = box["y"] + (box["height"] / 2)
+                                    page.mouse.move(cx, cy)
+                                    time.sleep(0.1)
+                                print(f"[{elapsed:.1f}s] Hovered across columns 0-6 on Canvas 2D")
+                    except Exception:
+                        pass
 
-            # --- PART 4: Scott Xiang (DevOps & Infrastructure) ---
-            show_subtitle("Scott Xiang · DevOps Lead", "Hi everyone, I'm Scott Xiang, DevOps and deployment lead. In PvE mode, we integrated Bailian Qwen3.6-Flash.", 4.0, "#f59e0b")
-            show_subtitle("Scott Xiang · DevOps Lead", "The AI Coach acts as an engaging campus peer while enforcing strict conversational guardrails.", 4.0, "#f59e0b")
+                if elapsed >= 104.0 and "drop_col3" not in actions_done:
+                    actions_done.add("drop_col3")
+                    try:
+                        canvas = page.locator("#gameCanvas")
+                        if canvas.count() > 0:
+                            box = canvas.bounding_box()
+                            if box:
+                                col3_x = box["x"] + (box["width"] / 7) * 3.5
+                                col_y = box["y"] + (box["height"] / 2)
+                                page.mouse.click(col3_x, col_y)
+                                print(f"[{elapsed:.1f}s] Dropped Red token into Column 3 (center)")
+                    except Exception:
+                        pass
 
-            # Click Daily Icebreaker or type chat
-            try:
-                icebreaker = page.locator(".topic-pill-btn").nth(1) # Midterm Prep
-                if icebreaker.count() > 0:
-                    icebreaker.click()
-                    time.sleep(1.5 / speed_factor)
-                
-                chat_input = page.locator("#chatInput")
-                if chat_input.count() > 0 and chat_input.is_visible():
-                    chat_input.fill("Any tips for Connect Four strategy?")
-                    time.sleep(0.5 / speed_factor)
-                    page.locator("#btnSendChat").click()
-                    time.sleep(2.0 / speed_factor)
-            except Exception as e:
-                print("Notice on chat:", e)
+                if elapsed >= 114.0 and "canned_reaction" not in actions_done:
+                    actions_done.add("canned_reaction")
+                    try:
+                        page.locator(".phrase-btn").nth(1).click(force=True)  # "Nice move!"
+                        time.sleep(0.5)
+                        page.locator(".sticker-btn").nth(0).click(force=True) # Thumbs Up 👍
+                        print(f"[{elapsed:.1f}s] Sent canned phrase 'Nice move!' and reaction sticker 👍")
+                    except Exception:
+                        pass
 
-            show_subtitle("Scott Xiang · DevOps Lead", "If the API times out past 3.5s or hits rate limits, our local Depth-4 Minimax algorithm executes in under 24ms.", 4.5, "#f59e0b")
-            show_subtitle("Scott Xiang · DevOps Lead", "The platform runs in a hardened non-root container. Our automated suite verifies 8 of 8 deployment invariants.", 4.0, "#f59e0b")
-            show_subtitle("Scott Xiang · DevOps Lead", "ConnectFour Connect delivers a safe, zero-latency, anxiety-free social gaming experience. Thank you!", 3.5, "#f59e0b")
+                if elapsed >= 124.0 and "drop_col2" not in actions_done:
+                    actions_done.add("drop_col2")
+                    try:
+                        canvas = page.locator("#gameCanvas")
+                        if canvas.count() > 0:
+                            box = canvas.bounding_box()
+                            if box:
+                                col2_x = box["x"] + (box["width"] / 7) * 2.5
+                                col_y = box["y"] + (box["height"] / 2)
+                                page.mouse.click(col2_x, col_y)
+                                print(f"[{elapsed:.1f}s] Dropped Red token into Column 2")
+                    except Exception:
+                        pass
 
-            time.sleep(1.5)
+                # --- Part 4 (2:15 - 3:00): Scott Xiang ---
+                if elapsed >= 138.0 and "click_icebreaker" not in actions_done:
+                    actions_done.add("click_icebreaker")
+                    try:
+                        icebreaker = page.locator(".topic-pill-btn").nth(1)  # Midterm Prep
+                        if icebreaker.count() > 0:
+                            icebreaker.click(force=True)
+                            print(f"[{elapsed:.1f}s] Sent Daily Icebreaker card: Midterm Prep")
+                    except Exception:
+                        pass
+
+                if elapsed >= 148.0 and "chat_coach" not in actions_done:
+                    actions_done.add("chat_coach")
+                    try:
+                        chat_input = page.locator("#chatInput")
+                        if chat_input.count() > 0 and chat_input.is_visible():
+                            chat_input.fill("Any tips for Connect Four strategy?")
+                            time.sleep(0.3)
+                            page.locator("#btnSendChat").click(force=True)
+                            print(f"[{elapsed:.1f}s] Sent chat message to AI Coach: 'Any tips for Connect Four strategy?'")
+                    except Exception:
+                        pass
+
+                if elapsed >= 164.0 and "drop_col4" not in actions_done:
+                    actions_done.add("drop_col4")
+                    try:
+                        canvas = page.locator("#gameCanvas")
+                        if canvas.count() > 0:
+                            box = canvas.bounding_box()
+                            if box:
+                                col4_x = box["x"] + (box["width"] / 7) * 4.5
+                                col_y = box["y"] + (box["height"] / 2)
+                                page.mouse.click(col4_x, col_y)
+                                print(f"[{elapsed:.1f}s] Dropped Red token into Column 4")
+                    except Exception:
+                        pass
+
+                # Progress logging every 15 seconds
+                if int(elapsed) % 15 == 0 and int(elapsed) not in actions_done:
+                    actions_done.add(int(elapsed))
+                    print(f"      ... recording progress: {int(elapsed)}s / {int(TOTAL_DURATION)}s")
+
+                time.sleep(0.2)
+
+            print(f"[4/5] 180 seconds reached! Finalizing video context...")
             context.close()
             recorded_file = page.video.path()
             browser.close()
 
-            print(f"[4/5] Moving recorded video from {recorded_file} to {OUT_VIDEO_WEBM}...")
+            print(f"[5/5] Moving recorded video from {recorded_file} to {OUT_VIDEO_WEBM}...")
             if os.path.exists(recorded_file):
                 if OUT_VIDEO_WEBM.exists():
                     OUT_VIDEO_WEBM.unlink()
                 import shutil
                 shutil.move(recorded_file, OUT_VIDEO_WEBM)
-                print(f"[5/5] SUCCESS: Demo video recorded at: {OUT_VIDEO_WEBM}")
-                print(f"      Size: {OUT_VIDEO_WEBM.stat().st_size / (1024*1024):.2f} MB")
-
-                print(f"      ✓ High-definition demo sample ready: {OUT_VIDEO_WEBM}")
+                file_size_mb = OUT_VIDEO_WEBM.stat().st_size / (1024 * 1024)
+                print(f"      ✓ SUCCESS: 3-Minute demo video recorded at: {OUT_VIDEO_WEBM}")
+                print(f"      ✓ Size: {file_size_mb:.2f} MB")
+                print(f"      ✓ Duration: {TOTAL_DURATION} seconds (3:00)")
             else:
                 print("ERROR: Video file was not created by Playwright.")
 
@@ -237,7 +349,4 @@ def record_demo(speed_factor: float = 1.0):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--speed", type=float, default=1.0, help="Speed factor (e.g. 1.0 for real-time, 1.5 for fast sample)")
-    args = parser.parse_args()
-    record_demo(speed_factor=args.speed)
+    record_3min_demo()

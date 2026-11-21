@@ -490,6 +490,56 @@
       color: var(--text-main);
     }
 
+    /* Demo Video Section */
+    .video-wrapper {
+      position: relative;
+      background: #020617;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      max-width: 960px;
+      margin: 0 auto 2.5rem;
+    }
+    .video-wrapper video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .video-timeline {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .timeline-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      border-top: 3px solid var(--accent-primary);
+    }
+    .timeline-card .time-range {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+    }
+    .timeline-card .speaker-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.35rem;
+    }
+    .timeline-card .speaker-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .hero { padding: 3.5rem 0 2rem; }
@@ -510,6 +560,7 @@
         <li><a href="#architecture">Architecture</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#evaluation">Evaluation</a></li>
+        <li><a href="#demo">Demo Video</a></li>
         <li><a href="#team">Team</a></li>
       </ul>
       <div class="nav-cta">
@@ -735,6 +786,50 @@
           <img src="figures/turn_latency_distribution.svg" alt="Turn Latency Distribution">
           <div class="figure-title">Turn Latency Distribution</div>
           <div class="figure-desc">AI LLM moves average 1.82s (deadline 3.5s); local Minimax heuristic executes in ~23.6ms.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3-Minute Demo Video Walkthrough -->
+  <section class="section" id="demo">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Multimedia Deliverable</div>
+        <h2 class="section-title">3-Minute Walkthrough Video</h2>
+        <p class="section-desc">
+          Official 180-second sample recording with synchronized subtitles covering all four team members' contributions (45s each).
+        </p>
+      </div>
+
+      <div class="video-wrapper">
+        <video controls preload="metadata" style="width: 100%; border-radius: 12px; background: #000;">
+          <source src="ConnectFour_Connect_Demo_Sample.webm" type="video/webm">
+          <track src="subtitles.vtt" kind="subtitles" srclang="en" label="English" default>
+          Your browser does not support the video tag.
+        </video>
+      </div>
+
+      <div class="video-timeline">
+        <div class="timeline-card" style="border-top-color: #0284c7;">
+          <div class="time-range">0:00 – 0:45 · Part 1</div>
+          <div class="speaker-name">Yuzhou Zhou</div>
+          <div class="speaker-desc">Project motivation, activity-mediated socializing paradigm, guest onboarding, and custom AI settings accordion.</div>
+        </div>
+        <div class="timeline-card" style="border-top-color: #10b981;">
+          <div class="time-range">0:45 – 1:30 · Part 2</div>
+          <div class="speaker-name">Yuexiang Ma</div>
+          <div class="speaker-desc">In-memory FIFO queue, age-window gating (|ΔAge| ≤ 3, Age ≥ 18), 15s timeout auto-routing to AI Coach, and communication safety.</div>
+        </div>
+        <div class="timeline-card" style="border-top-color: #ec4899;">
+          <div class="time-range">1:30 – 2:15 · Part 3</div>
+          <div class="speaker-name">Leo Shang</div>
+          <div class="speaker-desc">HTML5 Canvas 2D engine, Pointer Events input normalization, vertical token drop animation, canned phrases & stickers.</div>
+        </div>
+        <div class="timeline-card" style="border-top-color: #f59e0b;">
+          <div class="time-range">2:15 – 3:00 · Part 4</div>
+          <div class="speaker-name">Scott Xiang</div>
+          <div class="speaker-desc">Alibaba Cloud Bailian qwen3.6-flash AI Coach in PvE, sub-24ms local Minimax fallback, non-root Docker hardening & conclusion.</div>
         </div>
       </div>
     </div>
